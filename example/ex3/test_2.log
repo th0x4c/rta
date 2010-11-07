@@ -1,0 +1,20 @@
+2010-11-07 17:40:05.527 [INFO] sid: 2, msg: "Session is standing by"
+2010-11-07 17:40:21.839 [INFO] sid: 2, msg: "Session started"
+2010-11-07 17:40:23.062 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:21.840", elapsed: 0.219, error: 0
+2010-11-07 17:40:24.079 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:23.063", elapsed: 0.014, error: 0
+2010-11-07 17:40:25.093 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:24.080", elapsed: 0.012, error: 0
+2010-11-07 17:40:26.107 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:25.094", elapsed: 0.011, error: 0
+2010-11-07 17:40:27.121 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:26.107", elapsed: 0.01, error: 0
+2010-11-07 17:40:28.131 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:27.121", elapsed: 0.009, error: 0
+2010-11-07 17:40:29.149 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:28.132", elapsed: 0.015, error: 0
+2010-11-07 17:40:30.161 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:29.150", elapsed: 0.01, error: 0
+2010-11-07 17:40:31.173 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:30.162", elapsed: 0.01, error: 0
+2010-11-07 17:40:32.187 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:31.173", elapsed: 0.013, error: 0
+2010-11-07 17:40:33.196 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:32.187", elapsed: 0.008, error: 0
+2010-11-07 17:40:34.209 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:33.197", elapsed: 0.011, error: 0
+2010-11-07 17:40:35.224 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:34.210", elapsed: 0.013, error: 0
+2010-11-07 17:40:36.240 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:35.224", elapsed: 0.015, error: 0
+2010-11-07 17:40:37.253 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:36.241", elapsed: 0.01, error: 0
+2010-11-07 17:40:38.262 [DEBUG] sid: 2, tx: "tx1", start: "2010-11-07 17:40:37.253", elapsed: 0.008, error: 0
+2010-11-07 17:40:38.263 [INFO] sid: 2, msg: "Session terminated"
+2010-11-07 17:40:38.265 [INFO] sid: 2, tx: "tx1", count: 16, error: 0, start: "2010-11-07 17:40:21.840", end: "2010-11-07 17:40:37.261", elapsed: 0.388, avg: 0.024, max: 0.219, min: 0.008

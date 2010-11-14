@@ -2,6 +2,7 @@ require 'java'
 require 'thread'
 import java.sql.DriverManager
 import Java::oracle.jdbc.driver.OracleDriver
+require 'drb'
 
 module RTA
   class Session
@@ -145,26 +146,35 @@ module RTA
         end
       end
     end
+
+    def start_service(port)
+      DRb.start_service("druby://localhost:#{port}", self)
+      DRb.thread.join
+    end
+
+    def stop_service
+      DRb.stop_service
+    end
  
     def standby(sids = nil)
       sids ||= 1 .. @sessions.size
       Array(sids).each do |sid|
-        session[sid].standby
+        session(sid).standby
       end
     end
 
     def go(sids = nil)
       sids ||= 1 .. @sessions.size
       Array(sids).each do |sid|
-        session[sid].go
+        session(sid).go
       end
     end
 
     def stop(sids = nil)
       sids ||= 1 .. @sessions.size
       Array(sids).each do |sid|
-        session[sid].stop
-        thread[sid].join
+        session(sid).stop
+        thread(sid).join
       end
     end
 

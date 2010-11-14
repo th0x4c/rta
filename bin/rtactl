@@ -16,39 +16,6 @@ class Option
   end
 end
 
-class RTAController
-  attr_reader :session_manager
-
-  def start_service(opt, session_class)
-    @session_manager = RTA::SessionManager.new(opt.numses, session_class)
-    DRb.start_service("druby://localhost:#{opt.port}", self)
-    @session_manager.run
-    DRb.thread.join
-  end
-
-  def stop_service
-    DRb.stop_service
-  end
-
-  def command(command, opt)
-    DRb.start_service
-    rtactl = DRbObject.new_with_uri("druby://localhost:#{opt.port}")
-    sm = rtactl.session_manager
-
-    case command
-    when "standby"
-      sm.standby(opt.sids)
-    when "go"
-      sm.go(opt.sids)
-    when "stop"
-      sm.stop(opt.sids)
-      if opt.sids.nil?
-        rtactl.stop_service
-      end
-    end
-  end
-end
-
 COMMANDS = ["start", "standby", "go", "stop"]
 
 opt = Option.new
@@ -94,7 +61,6 @@ end
 
 command = ARGV[0]
 filename = ARGV[1]
-rtactl = RTAController.new
 
 if command == "start"
   $INHERITORS = Array.new
@@ -108,8 +74,22 @@ if command == "start"
   session_class = $INHERITORS[-1]
   session_class ||= RTA::Session
 
-  rtactl.start_service(opt, session_class)
+  sm = RTA::SessionManager.new(opt.numses, session_class)
+  sm.run
+  sm.start_service(opt.port)
 else
-  rtactl.command(command, opt)
-end
+  DRb.start_service
+  sm = DRbObject.new_with_uri("druby://localhost:#{opt.port}")
 
+  case command
+  when "standby"
+    sm.standby(opt.sids)
+  when "go"
+    sm.go(opt.sids)
+  when "stop"
+    sm.stop(opt.sids)
+    if opt.sids.nil?
+      sm.stop_service
+    end
+  end
+end

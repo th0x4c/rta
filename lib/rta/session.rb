@@ -68,7 +68,7 @@ module RTA
       end
 
       @log.info("sid: #{@session_id}, msg: \"Session terminated\"")
-      summary
+      @log.info(summary)
       teardown
     end
 
@@ -84,24 +84,34 @@ module RTA
       @status = STOP
     end
 
-    def summary
+    def each_transaction
+      txs = Array.new
       instance_variables.each do |var|
         klass = instance_variable_get(var).class
         next if klass != RTA::Transaction
-        tx = instance_variable_get(var)
-        avg = tx.count == 0 ? 0 : tx.total_elapsed_time / tx.count
-        msg = "sid: #{@session_id}, " +
-              "tx: \"#{tx.name}\", " +
-              "count: #{tx.count}, " +
-              "error: #{tx.error_count}, " +
-              "start: \"#{time_to_str(tx.first_time)}\", " +
-              "end: \"#{time_to_str(tx.end_time)}\", " +
-              "elapsed: #{tx.total_elapsed_time}, " +
-              "avg: #{sprintf("%.3f", avg)}, " +
-              "max: #{tx.max_elapsed_time}, " +
-              "min: #{tx.min_elapsed_time}"
-        @log.info(msg)
+        txs << instance_variable_get(var)
       end
+      txs.each do |tx|
+        yield tx
+      end
+    end
+
+    def summary
+      msgs = Array.new
+      each_transaction do |tx|
+        avg = tx.count == 0 ? 0 : tx.total_elapsed_time / tx.count
+        msgs << "sid: #{@session_id}, " +
+                "tx: \"#{tx.name}\", " +
+                "count: #{tx.count}, " +
+                "error: #{tx.error_count}, " +
+                "start: \"#{time_to_str(tx.first_time)}\", " +
+                "end: \"#{time_to_str(tx.end_time)}\", " +
+                "elapsed: #{tx.total_elapsed_time}, " +
+                "avg: #{sprintf("%.3f", avg)}, " +
+                "max: #{tx.max_elapsed_time}, " +
+                "min: #{tx.min_elapsed_time}"
+      end
+      return msgs.join("\n")
     end
 
     private
@@ -139,22 +149,22 @@ module RTA
     def standby(sids = nil)
       sids ||= 1 .. @sessions.size
       Array(sids).each do |sid|
-        @sessions[sid - 1].standby
+        session[sid].standby
       end
     end
 
     def go(sids = nil)
       sids ||= 1 .. @sessions.size
       Array(sids).each do |sid|
-        @sessions[sid - 1].go
+        session[sid].go
       end
     end
 
     def stop(sids = nil)
       sids ||= 1 .. @sessions.size
       Array(sids).each do |sid|
-        @sessions[sid - 1].stop
-        @threads[sid - 1].join
+        session[sid].stop
+        thread[sid].join
       end
     end
 
@@ -162,9 +172,19 @@ module RTA
       return @sessions[sid - 1]
     end
 
+    def thread(sid)
+      return @threads[sid - 1]
+    end
+
     def each
       @sessions.each do |ses|
         yield ses
+      end
+    end
+
+    def each_with_id
+      @sessions.each_with_index do |ses, i|
+        yield ses, i + 1
       end
     end
   end

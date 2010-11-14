@@ -29,7 +29,7 @@ module RTA
     end
 
     def puts(msg)
-      msg = time_to_str(Time.now) + " " + msg
+      msg = add_string_to_each_line(time_to_str(Time.now) + " ", msg)
       @file.flock(File::LOCK_EX)
       @file.puts(msg)
       @file.flush
@@ -38,35 +38,39 @@ module RTA
 
     def fatal(msg)
       return if @level < FATAL
-      msg = "[FATAL] " + msg
+      msg = add_string_to_each_line("[FATAL] ", msg)
       puts(msg)
     end
 
     def error(msg)
       return if @level < ERROR
-      msg = "[ERROR] " + msg
+      msg = add_string_to_each_line("[ERROR] ", msg)
       puts(msg)
     end
 
     def warn(msg)
       return if @level < WARN
-      msg = "[WARN] " + msg
+      msg = add_string_to_each_line("[WARN] ", msg)
       puts(msg)
     end
 
     def info(msg)
       return if @level < INFO
-      msg = "[INFO] " + msg
+      msg = add_string_to_each_line("[INFO] ", msg)
       puts(msg)
     end
 
     def debug(msg)
       return if @level < DEBUG
-      msg = "[DEBUG] " + msg
+      msg = add_string_to_each_line("[DEBUG] ", msg)
       puts(msg)
     end
 
     private
+    def add_string_to_each_line(str, msg)
+      return msg.map { |line| str + line }.join
+    end
+
     def time_to_str(time)
       return time.strftime("%Y-%m-%d %X.") + sprintf("%03d", (time.usec / 1000))
     end

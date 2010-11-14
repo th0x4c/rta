@@ -9,6 +9,7 @@ module RTA
     ALL = 10
 
     @@files = Hash.new
+    @@instance_count = Hash.new
 
     attr_accessor :level
 
@@ -23,9 +24,19 @@ module RTA
         end
       else
         filename = File.expand_path(filename)
-        @@files[filename] ||= File.open(filename, "a")
+        @@instance_count[filename] ||= 0
+        if @@instance_count[filename] == 0
+          @@files[filename] = File.open(filename, "a")
+        end
+        @@instance_count[filename] += 1
         @file = @@files[filename]
       end
+    end
+
+    def close
+      return if @file.equal?(STDOUT)
+      @@instance_count[@file.path] -= 1
+      @file.close if @@instance_count[@file.path] == 0
     end
 
     def puts(msg)

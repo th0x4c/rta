@@ -126,7 +126,7 @@ module RTA
     end
 
     def time_to_str(time)
-      return time.strftime("%Y-%m-%d %X.") + sprintf("%03d", (time.usec / 1000))
+      return time.strftime("%Y-%m-%d %X.") + sprintf("%03d", (time.usec / 1000)) if time
     end
   end
 

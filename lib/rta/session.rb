@@ -174,7 +174,10 @@ module RTA
       sids ||= 1 .. @sessions.size
       Array(sids).each do |sid|
         session(sid).stop
-        thread(sid).join
+      end
+      if stop_session_count == @sessions.size
+        @threads.each { |th| th.join }
+        stop_service
       end
     end
 
@@ -196,6 +199,14 @@ module RTA
       @sessions.each_with_index do |ses, i|
         yield ses, i + 1
       end
+    end
+
+    def stop_session_count
+      count = 0
+      each do |ses|
+        count += 1 if ses.status == RTA::Session::STOP
+      end
+      return count
     end
   end
 end

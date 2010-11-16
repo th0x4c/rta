@@ -88,8 +88,5 @@ else
     sm.go(opt.sids)
   when "stop"
     sm.stop(opt.sids)
-    if opt.sids.nil?
-      sm.stop_service
-    end
   end
 end

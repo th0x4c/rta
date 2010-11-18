@@ -1,11 +1,12 @@
 require 'java'
 import java.sql.SQLException
+require "forwardable"
 
 module RTA
-  class Transaction
+  class TransactionStatistic
     # Transaction 名
     # @return [String]
-    attr_reader :name
+    attr_accessor :name
 
     # 実行回数
     # @return [Number]
@@ -53,30 +54,30 @@ module RTA
     # @return [nil] 前回実行時にエラーなしの場合は nil
     attr_reader :sql_exception
 
-    # トランザクションを生成
-    # @return [Transaction]
-    def initialize(name = nil, &block)
+    def initialize(name = nil)
       @name = name
       @count = 0
-      @elapsed_time = 0 
+      @elapsed_time = 0
       @total_elapsed_time = 0
       @error_count = 0
-      @transaction = block
     end
 
-    # トランザクションを実行
-    def execute
+    def start
       @sql_exception = nil
-      @before_all.call if @before_all && @count == 0
-      @before_each.call if @before_each
       @start_time = Time.now
       @first_time ||= @start_time
-      begin
-        @transaction.call
-      rescue SQLException => e
-        @sql_exception = e.cause
-        @error_count += 1
+      if block_given?
+        yield
+        self.end
       end
+    end
+
+    def sql_exception=(exception)
+      @sql_exception = exception
+      @error_count += 1
+    end
+
+    def end
       @end_time = Time.now
       @count += 1
       @elapsed_time = @end_time - @start_time
@@ -89,6 +90,32 @@ module RTA
                               @elapsed_time : @max_elapsed_time
         @min_elapsed_time = @elapsed_time < @min_elapsed_time ?
                               @elapsed_time : @min_elapsed_time
+      end
+    end
+  end
+
+  class Transaction
+    extend Forwardable
+
+    def_delegators :@statistic, :name, :count, :first_time, :start_time, :end_time, :elapsed_time, :total_elapsed_time, :max_elapsed_time, :min_elapsed_time, :error_count, :sql_exception
+
+    # トランザクションを生成
+    # @return [Transaction]
+    def initialize(name = nil, &block)
+      @statistic = TransactionStatistic.new(name)
+      @transaction = block
+    end
+
+    # トランザクションを実行
+    def execute
+      @before_all.call if @before_all && @statistic.count == 0
+      @before_each.call if @before_each
+      @statistic.start do
+        begin
+          @transaction.call
+        rescue SQLException => e
+          @statistic.sql_exception = e.cause
+        end
       end
       @after_each.call if @after_each
     end

@@ -54,12 +54,22 @@ module RTA
     # @return [nil] 前回実行時にエラーなしの場合は nil
     attr_reader :sql_exception
 
-    def initialize(name = nil)
-      @name = name
-      @count = 0
-      @elapsed_time = 0
-      @total_elapsed_time = 0
-      @error_count = 0
+    def initialize(name = "",
+                   stat_hash = {:name => nil, :count => 0, :first_time => nil,
+                                :start_time => nil, :end_time => nil,
+                                :elapsed_time => 0, :total_elapsed_time => 0,
+                                :max_elapsed_time => nil, :min_elapsed_time => nil,
+                                :error_count => 0, :sql_exception => nil})
+      @name = stat_hash[:name] || name
+      @count = stat_hash[:count]
+      @elapsed_time = stat_hash[:elapsed_time]
+      @total_elapsed_time = stat_hash[:total_elapsed_time]
+      @error_count = stat_hash[:error_count]
+
+      @first_time = stat_hash[:first_time]
+      @start_time = stat_hash[:start_time]
+      @end_time = stat_hash[:end_time]
+      @sql_exception = stat_hash[:sql_exception]
     end
 
     def start
@@ -92,16 +102,110 @@ module RTA
                               @elapsed_time : @min_elapsed_time
       end
     end
+
+    def avg_elapsed_time
+      return @count == 0 ? 0 : @total_elapsed_time / @count
+    end
+
+    def tps
+      actual_elapsed_time = @count == 0 ? 0 : @end_time - @first_time
+      return actual_elapsed_time == 0 ? 0 : @count / actual_elapsed_time
+    end
+
+    def to_s
+      return "tx: \"#{@name}\", " +
+             "count: #{@count}, " +
+             "error: #{@error_count}, " +
+             "start: \"#{time_to_str(@first_time)}\", " +
+             "end: \"#{time_to_str(@end_time)}\", " +
+             "elapsed: #{@elapsed_time}, " +
+             "total: #{@total_elapsed_time}, " +
+             "avg: #{sprintf("%.3f", avg_elapsed_time)}, " +
+             "max: #{@max_elapsed_time}, " +
+             "min: #{@min_elapsed_time}, " +
+             "tps: #{tps}"
+    end
+
+    def +(stat)
+      if stat.first_time.nil?
+        ret = self.dup
+        ret.name = @name + stat.name
+        return ret
+      elsif @first_time.nil?
+        ret = stat.dup
+        ret.name = @name + stat.name
+        return ret
+      else
+        stat_hash = Hash.new
+        stat_hash[:name] = @name + stat.name
+        stat_hash[:count] = @count + stat.count
+        stat_hash[:first_time] = @first_time < stat.first_time ?
+                                   @first_time : stat.first_time
+        if @end_time > stat.end_time
+          stat_hash[:start_time] = @start_time
+          stat_hash[:end_time] = @end_time
+          stat_hash[:elapsed_time] = @elapsed_time
+          stat_hash[:sql_exception] = @sql_exception
+        else
+          stat_hash[:start_time] = stat.start_time
+          stat_hash[:end_time] = stat.end_time
+          stat_hash[:elapsed_time] = stat.elapsed_time
+          stat_hash[:sql_exception] = stat.sql_exception
+        end
+        stat_hash[:total_elapsed_time] = @total_elapsed_time + stat.total_elapsed_time
+        stat_hash[:max_elapsed_time] = @max_elapsed_time > stat.max_elapsed_time ?
+                                         @max_elapsed_time : stat.max_elapsed_time
+        stat_hash[:min_elapsed_time] = @min_elapsed_time < stat.min_elapsed_time ?
+                                         @min_elapsed_time : stat.min_elapsed_time
+        stat_hash[:error_count] = @error_count + stat.error_count
+        return TransactionStatistic.new(nil, stat_hash)
+      end
+    end
+
+    def -(stat)
+      if @name != stat.name || @first_time != stat.first_time
+        raise "different statistic"
+      elsif @count < stat.count
+        raise "receiver is older"
+      else
+        stat_hash = Hash.new
+        stat_hash[:name] = @name
+        stat_hash[:count] = @count - stat.count
+        stat_hash[:first_time] = stat.end_time
+        stat_hash[:start_time] = @start_time
+        stat_hash[:end_time] = @end_time
+        stat_hash[:elapsed_time] = @elapsed_time
+        stat_hash[:sql_exception] = @sql_exception
+        stat_hash[:elapsed_time] = @elapsed_time
+        stat_hash[:total_elapsed_time] = @total_elapsed_time - stat.total_elapsed_time
+        stat_hash[:max_elapsed_time] = @max_elapsed_time
+        stat_hash[:min_elapsed_time] = @min_elapsed_time
+        stat_hash[:error_count] = @error_count - stat.error_count
+        return TransactionStatistic.new(nil, stat_hash)
+      end
+    end
+
+    private
+    def time_to_str(time)
+      return time.strftime("%Y-%m-%d %X.") + sprintf("%03d", (time.usec / 1000)) if time
+    end
   end
 
   class Transaction
     extend Forwardable
 
-    def_delegators :@statistic, :name, :count, :first_time, :start_time, :end_time, :elapsed_time, :total_elapsed_time, :max_elapsed_time, :min_elapsed_time, :error_count, :sql_exception
+    def_delegators :@statistic, :name, :count, :first_time, :start_time,
+                                :end_time, :elapsed_time, :total_elapsed_time,
+                                :max_elapsed_time, :min_elapsed_time,
+                                :error_count, :sql_exception,
+                                :avg_elapsed_time, :tps, :to_s
+
+    attr_reader :statistic
+    alias_method :stat, :statistic
 
     # トランザクションを生成
     # @return [Transaction]
-    def initialize(name = nil, &block)
+    def initialize(name = "", &block)
       @statistic = TransactionStatistic.new(name)
       @transaction = block
     end

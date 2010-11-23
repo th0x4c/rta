@@ -60,10 +60,7 @@ module RTA
             @log.error(msg)
           end
           msg = "sid: #{@session_id}, " +
-                "tx: \"#{tx.name}\", " +
-                "start: \"#{time_to_str(tx.start_time)}\", " +
-                "elapsed: #{tx.elapsed_time}, " +
-                "error: #{error}"
+                tx.to_s
           @log.debug(msg)
         end
       end
@@ -100,17 +97,8 @@ module RTA
     def summary
       msgs = Array.new
       each_transaction do |tx|
-        avg = tx.count == 0 ? 0 : tx.total_elapsed_time / tx.count
         msgs << "sid: #{@session_id}, " +
-                "tx: \"#{tx.name}\", " +
-                "count: #{tx.count}, " +
-                "error: #{tx.error_count}, " +
-                "start: \"#{time_to_str(tx.first_time)}\", " +
-                "end: \"#{time_to_str(tx.end_time)}\", " +
-                "elapsed: #{tx.total_elapsed_time}, " +
-                "avg: #{sprintf("%.3f", avg)}, " +
-                "max: #{tx.max_elapsed_time}, " +
-                "min: #{tx.min_elapsed_time}"
+                tx.to_s
       end
       return msgs.join("\n")
     end
@@ -123,10 +111,6 @@ module RTA
     end
 
     def teardown
-    end
-
-    def time_to_str(time)
-      return time.strftime("%Y-%m-%d %X.") + sprintf("%03d", (time.usec / 1000)) if time
     end
   end
 

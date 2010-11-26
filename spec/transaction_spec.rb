@@ -1,5 +1,5 @@
-ROOT = File.expand_path(File.dirname(__FILE__))
-require "#{ROOT}/../lib/rta/transaction"
+require File.dirname(__FILE__) + '/spec_helper'
+require 'rta/transaction'
 
 describe RTA::Transaction do
   ELAPS = 0.003
@@ -35,7 +35,6 @@ describe RTA::Transaction do
     end
 
     @tx0 = RTA::Transaction.new do
-      sleep ELAPS
     end
 
     @tx1 = RTA::Transaction.new("tx1") do
@@ -185,6 +184,18 @@ describe RTA::Transaction do
       stat = @tx.stat + @tx1.stat
       stat.name.should == @tx.name + @tx1.name
       stat.count.should == TX_COUNT + 1
+
+      stat = @tx1.stat + @tx.stat
+      stat.name.should == @tx1.name + @tx.name
+      stat.count.should == 1 + TX_COUNT
+
+      stat = @tx.stat + @tx0.stat
+      stat.name.should == @tx.name + @tx0.name
+      stat.count.should == TX_COUNT + 0
+
+      stat = @tx0.stat + @tx.stat
+      stat.name.should == @tx0.name + @tx.name
+      stat.count.should == 0 + TX_COUNT
     end
 
     it "should not change receiver's statistics" do

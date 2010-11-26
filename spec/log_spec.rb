@@ -1,5 +1,5 @@
-ROOT = File.expand_path(File.dirname(__FILE__))
-require "#{ROOT}/../lib/rta/log"
+require File.dirname(__FILE__) + '/spec_helper'
+require 'rta/log'
 
 describe RTA::Log do
   FILENAME = "./test.log"

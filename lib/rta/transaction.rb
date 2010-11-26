@@ -63,6 +63,8 @@ module RTA
       @name = stat_hash[:name] || name
       @count = stat_hash[:count]
       @elapsed_time = stat_hash[:elapsed_time]
+      @max_elapsed_time = stat_hash[:max_elapsed_time]
+      @min_elapsed_time = stat_hash[:min_elapsed_time]
       @total_elapsed_time = stat_hash[:total_elapsed_time]
       @error_count = stat_hash[:error_count]
 

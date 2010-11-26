@@ -33,6 +33,7 @@ class ExampleSession < RTA::Session
       stmt.close
     end
     @tx2.after { sleep 0.5 }
+    @tx2.whenever_sqlerror { @con.rollback }
 
     # ログ
     # self.log = RTA::Log.new("./test_#{@session_id}.log")

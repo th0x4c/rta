@@ -219,6 +219,7 @@ module RTA
           @transaction.call
         rescue SQLException => e
           @statistic.sql_exception = e.cause
+          @whenever_sqlerror.call if @whenever_sqlerror
         end
       end
       @after_each.call if @after_each
@@ -240,6 +241,11 @@ module RTA
       @after_each = block
     end
     alias_method :after, :after_each
+
+    # トランザクション実行中に SQLException 発生時に実行される処理を登録
+    def whenever_sqlerror(&block)
+      @whenever_sqlerror = block
+    end
   end
 end
 

@@ -16,6 +16,7 @@ describe RTA::Transaction do
       @before_all_count ||= 0
       @before_count ||= 0
       @after_count ||= 0
+      @whenever_sqlerror_count ||= 0
 
       @before_all_count += 1
       @first_time = Time.now
@@ -28,6 +29,9 @@ describe RTA::Transaction do
       @end_time = Time.now
       @after_count += 1
       @count += 1
+    end
+    @tx.whenever_sqlerror do
+      @whenever_sqlerror_count += 1
     end
     1.upto(TX_COUNT) do |i|
       @tx.execute
@@ -176,6 +180,16 @@ describe RTA::Transaction do
   describe "#after_each" do
     it "should be called after each execution" do
       @after_count.should == TX_COUNT
+    end
+  end
+
+  describe "#whenever_sqlerror" do
+    it "should be called if SQLException happens" do
+      expected = 0
+      (0 .. TX_COUNT - 1).each do |i|
+        expected += 1 if i % 4 == 1
+      end
+      @whenever_sqlerror_count.should == expected
     end
   end
 

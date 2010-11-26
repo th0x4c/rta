@@ -194,7 +194,7 @@ describe RTA::Transaction do
   end
 
   describe "#stat.+" do
-    it "should be RTA::Statistic which has sum of transactions" do
+    it "should be RTA::TransactionStatistic which has sum of transactions" do
       stat = @tx.stat + @tx1.stat
       stat.name.should == @tx.name + @tx1.name
       stat.count.should == TX_COUNT + 1

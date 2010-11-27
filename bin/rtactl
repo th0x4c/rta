@@ -1,92 +1,30 @@
-#!/usr/bin/env jruby
+#!/bin/sh
 
-ROOT = File.expand_path(File.dirname(__FILE__))
-require "#{ROOT}/../lib/rta"
-require "optparse"
-require "drb"
-require "pp"
+RTA_HOME="`pwd`/`dirname $0`/../"
 
-class Option
-  attr_accessor :port
-  attr_accessor :sids
-  attr_accessor :numses
+JRUBY_CMD=`which jruby`
+if [ "$JRUBY_CMD" = "" ]
+then
+  JRUBY_COMPLETE="$RTA_HOME/lib/jruby/jruby-complete-1.5.5.jar"
+  JAVA_MEM=-Xmx500m
+  JAVA_STACK=-Xss1024k
+  JAVA_VM=-client
+  JAVA_OPTS="$JAVA_VM $JAVA_MEM $JAVA_STACK"
+  JRUBY_CMD="java $JAVA_OPTS -classpath $JRUBY_COMPLETE:$CLASSPATH org.jruby.Main"
+fi
 
-  def initialize
-    @numses = 1
-  end
-end
 
-COMMANDS = ["start", "standby", "go", "stop"]
+# 引数を配列を表す文字列 argv にする
+ARGV=""
+for arg in "$@"
+do
+  arg="'$arg'"
+  if [ "$ARGV" = "" ]
+  then
+    ARGV="$arg"
+  else
+    ARGV="$ARGV,$arg"
+  fi
+done
 
-opt = Option.new
-begin
-  op = OptionParser.new
-  op.banner = "Usage: #{File.basename($0)} [options] <command> [<file>]\n\n" +
-              "Example: jruby #{File.basename($0)} -p 9000 -n 5 start example.rb\n" +
-              "         jruby #{File.basename($0)} -p 9000 go\n" +
-              "         jruby #{File.basename($0)} -p 9000 -s 3,4 standby\n" +
-              "         jruby #{File.basename($0)} -p 9000 stop\n\n" +
-              "Option: "
-
-  op.on('-p', '--port=NUMBER', Numeric, 'specify port number') { |arg|
-    opt.port = arg
-  }
-  op.on('-n', '--number=NUMBER', Numeric, 'specify number of sessions') { |arg|
-    opt.numses = arg
-  }
-  op.on('-s', '--sid=SID_LIST', Array, 'specify session IDs (CSV)') { |arg|
-    opt.sids = arg.map { |sid| sid.to_i }
-  }
-  op.on('-h', 'output help') {
-    puts op.help
-    exit 0
-  }
-  op.parse!
-
-  raise "Missing command" if ARGV.size == 0
-  raise "Invalid command: #{ARGV[0]}" unless COMMANDS.find { |com| com == ARGV[0] }
-  raise "Missing port" unless opt.port
-  raise "Missing file: #{ARGV[1]}" if ARGV[0] == "start" &&
-                                      (ARGV[1].nil? || (! FileTest.exist?(ARGV[1])))
-
-rescue OptionParser::ParseError => err
-  STDERR.puts err.message
-  STDERR.puts op.help
-  exit 1
-rescue
-  STDERR.puts $! if $!.to_s != ""
-  STDERR.puts op.help
-  exit 1
-end
-
-command = ARGV[0]
-filename = ARGV[1]
-
-if command == "start"
-  $INHERITORS = Array.new
-  class RTA::Session
-    def self.inherited(subclass)
-      $INHERITORS << subclass
-    end
-  end
-
-  load filename
-  session_class = $INHERITORS[-1]
-  session_class ||= RTA::Session
-
-  sm = RTA::SessionManager.new(opt.numses, session_class)
-  sm.run
-  sm.start_service(opt.port)
-else
-  DRb.start_service
-  sm = DRbObject.new_with_uri("druby://localhost:#{opt.port}")
-
-  case command
-  when "standby"
-    sm.standby(opt.sids)
-  when "go"
-    sm.go(opt.sids)
-  when "stop"
-    sm.stop(opt.sids)
-  end
-end
+exec $JRUBY_CMD -e "require '$RTA_HOME/lib/rta'; RTA::Controller::Runner.new.run($ARGV)"

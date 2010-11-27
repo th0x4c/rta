@@ -6,3 +6,4 @@ end
 require "#{RTA::ROOT}/rta/transaction"
 require "#{RTA::ROOT}/rta/log"
 require "#{RTA::ROOT}/rta/session"
+require "#{RTA::ROOT}/rta/controller"

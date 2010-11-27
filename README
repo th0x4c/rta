@@ -1,0 +1,45 @@
+== RTA -- Ruby Transaction Application Tool
+
+== Synopsis
+Database transaction application generation tool in JRuby.
+
+== Description
+
+RTA is a database transaction application generation tool in JRuby.
+It enables the user to generate transaction processing application that is
+written in JRuby and JDBC.
+
+== Usage
+
+rtactl [options] <command> [<file>]
+
+-p | --port ::
+   Specify port number.
+
+-n | --number ::
+   Specify number of sessions.
+
+-s | --sid ::
+   Specify session IDs (CSV).
+
+-h ::
+   Output help
+
+== Example
+
+* Start RTA
+    rtactl -p 9000 -n 5 start example.rb
+* Change status to go
+    rtactl -p 9000 go
+* Change stataus of session 3 and 4 to standby
+    rtactl -p 9000 -s 3,4 standby
+* Launch command line interface to interact RTA
+    rtactl -p 9000 cli
+* Stop RTA
+    rtactl -p 9000 stop
+
+== Author
+Takashi Hashizume
+
+== Copyright
+Copyright (C) 2010 Takashi Hashizume

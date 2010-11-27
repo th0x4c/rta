@@ -1,5 +1,5 @@
 module RTA
-  VERSION = '0.2.0'
+  VERSION = '0.3.0'
   ROOT = File.expand_path(File.dirname(__FILE__))
 end
 

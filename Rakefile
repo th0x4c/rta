@@ -12,11 +12,13 @@ Spec::Rake::SpecTask.new(:spec) do |t|
   t.rcov_opts = ['--text-summary', '--exclude "__FORWARDABLE__,eval"']
 end
 
-desc "Package into distributable tar, zip and gem files"
-load 'rta.gemspec'
-Rake::GemPackageTask.new(SPEC) do |pkg|
-  pkg.need_zip = true
-  pkg.need_tar = true
+if File.exists?('rta.gemspec')
+  desc "Package into distributable tar, zip and gem files"
+  load 'rta.gemspec'
+  Rake::GemPackageTask.new(SPEC) do |pkg|
+    pkg.need_zip = true
+    pkg.need_tar = true
+  end
 end
 
 desc "Generate documentation"

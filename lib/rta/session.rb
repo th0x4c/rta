@@ -56,11 +56,10 @@ module RTA
             msg = "sid: #{@session_id}, " +
                   "tx: \"#{tx.name}\", " +
                   "error: #{error}, " +
-                  "errmsg: \:#{tx.sql_exception.getMessage}\""
+                  "errmsg: \"#{tx.sql_exception.getMessage.chomp}\""
             @log.error(msg)
           end
-          msg = "sid: #{@session_id}, " +
-                tx.to_s
+          msg = "sid: #{@session_id}, " + tx.to_s
           @log.debug(msg)
         end
       end
@@ -94,11 +93,25 @@ module RTA
       end
     end
 
+    def statistic
+      stat = RTA::TransactionStatistic.new
+      each_transaction do |tx|
+        stat += tx.stat
+      end
+      stat.name = "All SID #{@session_id} TXs"
+      return stat
+    end
+    alias_method :stat, :statistic
+
+    def to_s
+      return statistic.to_s
+    end
+
     def summary
       msgs = Array.new
+      msgs << "sid: #{@session_id}, " + self.to_s
       each_transaction do |tx|
-        msgs << "sid: #{@session_id}, " +
-                tx.to_s
+        msgs << "sid: #{@session_id}, " + tx.to_s
       end
       return msgs.join("\n")
     end

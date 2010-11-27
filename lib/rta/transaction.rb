@@ -98,10 +98,10 @@ module RTA
         @max_elapsed_time = @elapsed_time
         @min_elapsed_time = @elapsed_time
       else
-        @max_elapsed_time = @elapsed_time > @max_elapsed_time ?
-                              @elapsed_time : @max_elapsed_time
-        @min_elapsed_time = @elapsed_time < @min_elapsed_time ?
-                              @elapsed_time : @min_elapsed_time
+        @max_elapsed_time =
+          @elapsed_time > @max_elapsed_time ? @elapsed_time : @max_elapsed_time
+        @min_elapsed_time =
+          @elapsed_time < @min_elapsed_time ? @elapsed_time : @min_elapsed_time
       end
     end
 
@@ -141,8 +141,8 @@ module RTA
         stat_hash = Hash.new
         stat_hash[:name] = @name + stat.name
         stat_hash[:count] = @count + stat.count
-        stat_hash[:first_time] = @first_time < stat.first_time ?
-                                   @first_time : stat.first_time
+        stat_hash[:first_time] =
+          @first_time < stat.first_time ? @first_time : stat.first_time
         if @end_time > stat.end_time
           stat_hash[:start_time] = @start_time
           stat_hash[:end_time] = @end_time
@@ -155,10 +155,10 @@ module RTA
           stat_hash[:sql_exception] = stat.sql_exception
         end
         stat_hash[:total_elapsed_time] = @total_elapsed_time + stat.total_elapsed_time
-        stat_hash[:max_elapsed_time] = @max_elapsed_time > stat.max_elapsed_time ?
-                                         @max_elapsed_time : stat.max_elapsed_time
-        stat_hash[:min_elapsed_time] = @min_elapsed_time < stat.min_elapsed_time ?
-                                         @min_elapsed_time : stat.min_elapsed_time
+        stat_hash[:max_elapsed_time] =
+          @max_elapsed_time > stat.max_elapsed_time ? @max_elapsed_time : stat.max_elapsed_time
+        stat_hash[:min_elapsed_time] =
+          @min_elapsed_time < stat.min_elapsed_time ? @min_elapsed_time : stat.min_elapsed_time
         stat_hash[:error_count] = @error_count + stat.error_count
         return TransactionStatistic.new(nil, stat_hash)
       end

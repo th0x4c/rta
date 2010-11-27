@@ -5,7 +5,25 @@ import Java::oracle.jdbc.driver.OracleDriver
 require 'drb'
 
 module RTA
+  module SessionHelper
+    def statistic
+      stat = RTA::TransactionStatistic.new
+      self.transactions.each do |tx|
+        stat += tx.stat
+      end
+      stat.name = self.stat_name if self.respond_to?(:stat_name)
+      return stat
+    end
+    alias_method :stat, :statistic
+
+    def to_s
+      return statistic.to_s
+    end
+  end
+
   class Session
+    include SessionHelper
+
     STANDBY = :standby
     GO = :go
     STOP = :stop
@@ -81,36 +99,24 @@ module RTA
       @status = STOP
     end
 
-    def each_transaction
+    def transactions
       txs = Array.new
       instance_variables.each do |var|
         klass = instance_variable_get(var).class
         next if klass != RTA::Transaction
         txs << instance_variable_get(var)
       end
-      txs.each do |tx|
-        yield tx
-      end
+      return txs
     end
 
-    def statistic
-      stat = RTA::TransactionStatistic.new
-      each_transaction do |tx|
-        stat += tx.stat
-      end
-      stat.name = "All SID #{@session_id} TXs"
-      return stat
-    end
-    alias_method :stat, :statistic
-
-    def to_s
-      return statistic.to_s
+    def stat_name
+      return "All SID #{@session_id} TXs"
     end
 
     def summary
       msgs = Array.new
       msgs << "sid: #{@session_id}, " + self.to_s
-      each_transaction do |tx|
+      transactions.each do |tx|
         msgs << "sid: #{@session_id}, " + tx.to_s
       end
       return msgs.join("\n")
@@ -128,6 +134,8 @@ module RTA
   end
 
   class SessionManager
+    include SessionHelper
+
     def initialize(numses, session_class = RTA::Session)
       @sessions = Array.new
       @threads = Array.new
@@ -205,6 +213,18 @@ module RTA
         count += 1 if ses.status == RTA::Session::STOP
       end
       return count
+    end
+
+    def transactions
+      txs = Array.new
+      @sessions.each do |ses|
+        txs += ses.transactions
+      end
+      return txs
+    end
+
+    def stat_name
+      return "All SID TXs"
     end
   end
 end

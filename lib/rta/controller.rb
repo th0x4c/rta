@@ -1,15 +1,17 @@
 require 'optparse'
 require 'drb'
 require 'pp'
+require 'irb'
 
 module RTA
   module Controller
-    COMMANDS = ["start", "standby", "go", "stop"]
+    COMMANDS = ["start", "standby", "go", "stop", "cli"]
 
     BANNER = "Usage: rtactl [options] <command> [<file>]\n\n" +
              "Example: rtactl -p 9000 -n 5 start example.rb\n" +
              "         rtactl -p 9000 go\n" +
              "         rtactl -p 9000 -s 3,4 standby\n" +
+             "         rtactl -p 9000 cli\n" +
              "         rtactl -p 9000 stop\n\n" +
              "Option: "
 
@@ -81,6 +83,9 @@ module RTA
             sm.go(opt.sids)
           when "stop"
             sm.stop(opt.sids)
+          when "cli"
+            $rta = sm
+            IRB.start(__FILE__)
           end
         end
       end

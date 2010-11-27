@@ -144,12 +144,13 @@ module RTA
       end
     end
 
+    def wait
+      @threads.each { |th| th.join }
+    end
+
     def start_service(port)
       DRb.start_service("druby://localhost:#{port}", self)
-      until stop_session_count == @sessions.size
-        sleep 0.001
-      end
-      @threads.each { |th| th.join }
+      wait
       stop_service
     end
 

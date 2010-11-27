@@ -66,6 +66,10 @@ module RTA
     end
 
     class Runner
+      def self.run(*argv)
+        new.run(*argv)
+      end
+
       def run(*argv)
         opt = RTA::Controller::Option.new
         opt.parse(argv)

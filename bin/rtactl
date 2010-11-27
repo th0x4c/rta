@@ -27,4 +27,4 @@ do
   fi
 done
 
-exec $JRUBY_CMD -e "require '$RTA_HOME/lib/rta'; RTA::Controller::Runner.new.run($ARGV)"
+exec $JRUBY_CMD -e "require '$RTA_HOME/lib/rta'; RTA::Controller::Runner.run($ARGV)"

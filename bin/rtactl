@@ -2,7 +2,7 @@
 
 RTA_HOME="`pwd`/`dirname $0`/../"
 
-JRUBY_CMD=`which jruby`
+JRUBY_CMD=`which jruby 2>&1 | grep -v "no jruby"`
 if [ "$JRUBY_CMD" = "" ]
 then
   JRUBY_COMPLETE="$RTA_HOME/lib/jruby/jruby-complete-1.5.5.jar"

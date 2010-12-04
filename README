@@ -31,7 +31,7 @@ rtactl [options] <command> [<file>]
     rtactl -p 9000 -n 5 start example.rb
 * Change status to go
     rtactl -p 9000 go
-* Change stataus of session 3 and 4 to standby
+* Change status of session 3 and 4 to standby
     rtactl -p 9000 -s 3,4 standby
 * Launch command line interface to interact RTA
     rtactl -p 9000 cli

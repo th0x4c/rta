@@ -204,4 +204,33 @@ describe RTA::SessionManager do
       @session_manager.stop([2, 3])
     end
   end
+
+  describe "#start_service" do
+    it "should call DRb.start_service" do
+      DRb.should_receive(:start_service)
+      @session_manager.start_service(9000)
+    end
+  end
+
+  describe "#stop_service" do
+    it "should call DRb.stop_service" do
+      DRb.should_receive(:stop_service)
+      @session_manager.stop_service
+    end
+  end
+
+  describe "#stop_session_count" do
+    it "should return a number of stop sessions" do
+      @ex_session_mock.stub!(:status).and_return(RTA::Session::STOP, RTA::Session::GO)
+      @session_manager.run
+      @session_manager.stop_session_count.should == 1
+    end
+  end
+
+  describe "#transactions" do
+    it "should call RTA::Session#transactions" do
+      @ex_session_mock.should_receive(:transactions).exactly(SESSION_COUNT).times.and_return(["tx"])
+      @session_manager.transactions.should == ["tx"] * SESSION_COUNT
+    end
+  end
 end

@@ -35,31 +35,30 @@ module RTA
       end
 
       def parse(argv = ARGV)
+        argv = argv.dup
         begin
           op = OptionParser.new
           op.banner = BANNER
           op.on(*OPTIONS[:port]) { |arg| @port = arg }
           op.on(*OPTIONS[:numses]) { |arg| @numses = arg }
           op.on(*OPTIONS[:sids]) { |arg| @sids = arg.map { |sid| sid.to_i } }
-          op.on(*OPTIONS[:help]) { puts op.help; exit 0 }
+          op.on(*OPTIONS[:help]) { STDOUT.puts op.help; exit 0 }
           op.parse!(argv)
 
           raise "Missing command" if argv.size == 0
           raise "Invalid command: #{argv[0]}" unless COMMANDS.find { |com| com == argv[0] }
           raise "Missing port" unless @port
-          if ARGV[0] == "start" && (argv[1].nil? || (! FileTest.exist?(argv[1])))
+          if argv[0] == "start" && (argv[1].nil? || (! FileTest.exist?(argv[1])))
             raise "Missing file: #{argv[1]}"
           end
 
           @command = argv[0]
           @filename = argv[1]
         rescue OptionParser::ParseError => err
-          STDERR.puts err.message
-          STDERR.puts op.help
+          STDERR.puts err.message + "\n" + op.help
           exit 1
         rescue
-          STDERR.puts $! if $!.to_s != ""
-          STDERR.puts op.help
+          STDERR.puts $!.to_s + "\n" + op.help
           exit 1
         end
       end
@@ -102,7 +101,7 @@ module RTA
           end
         end
 
-        load opt.filename
+        Kernel.load opt.filename
         session_class = $INHERITORS[-1]
         session_class ||= RTA::Session
 

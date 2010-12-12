@@ -6,7 +6,7 @@ SPEC = Gem::Specification.new do |s|
     It enables the user to generate transaction processing application that is
     written in JRuby and JDBC.
   EOF
-  s.version       = "0.3.5"
+  s.version       = "0.3.6"
   s.author        = "Takashi Hashizume"
   s.email         = "th0x4c@gmail.com"
   s.files         = Dir.glob("{bin,lib,spec,examples}/**/*") + ['README', 'Rakefile']

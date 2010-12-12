@@ -4,9 +4,12 @@ require 'pp'
 require 'irb'
 
 module RTA
+  # コマンド制御用のモジュール
   module Controller
+    # 実行できるコマンド
     COMMANDS = ["start", "standby", "go", "stop", "cli"]
 
+    # バナー出力
     BANNER = "Usage: rtactl [options] <command> [<file>]\n\n" +
              "Example: rtactl -p 9000 -n 5 start example.rb\n" +
              "         rtactl -p 9000 go\n" +
@@ -15,6 +18,7 @@ module RTA
              "         rtactl -p 9000 stop\n\n" +
              "Option: "
 
+    # オプション
     OPTIONS = {
       :port => ['-p', '--port=NUMBER', Numeric, 'specify port number'],
       :numses => ['-n', '--number=NUMBER', Numeric, 'specify number of sessions'],
@@ -22,18 +26,36 @@ module RTA
       :help => ['-h', 'output help']
     }
 
+    # オプションを表すクラス
     class Option
+      # port 番号
+      # @return [Number]
       attr_accessor :port
+
+      # セッション ID の配列
+      # @return [Array<Number>]
       attr_accessor :sids
+
+      # セッション数
+      # @return [Number]
       attr_accessor :numses
 
+      # 実行するコマンド
+      # @return [String]
       attr_reader :command
+
+      # ファイル名
+      # @return [String]
       attr_reader :filename
 
+      # Option インスタンスを生成
       def initialize
         @numses = 1
       end
 
+      # 引数を解析
+      #
+      # @param [Array<String>] argv 引数の文字列の配列
       def parse(argv = ARGV)
         argv = argv.dup
         begin
@@ -64,11 +86,18 @@ module RTA
       end
     end
 
+    # コマンド実行するクラス
     class Runner
+      # インスタンスを生成し, {#run} を実行するためのヘルパメソッド
+      #
+      # @param [Array<String>] argv 引数の文字列の配列
       def self.run(*argv)
         new.run(*argv)
       end
 
+      # 与えられた引数に従い, コマンドを実行
+      #
+      # @param [Array<String>] argv 引数の文字列の配列
       def run(*argv)
         opt = RTA::Controller::Option.new
         opt.parse(argv)
@@ -93,6 +122,9 @@ module RTA
         end
       end
 
+      # +start+ コマンド実行
+      #
+      # @param [Option] opt 解析された {Option} インスタンス
       def start(opt)
         $INHERITORS = Array.new
         RTA::Session.class_eval do

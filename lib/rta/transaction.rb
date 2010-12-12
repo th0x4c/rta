@@ -3,6 +3,9 @@ import java.sql.SQLException
 require "forwardable"
 
 module RTA
+  # {Transaction} の統計情報を表すクラス
+  #
+  # @see Transaction
   class TransactionStatistic
     # Transaction 名
     # @return [String]
@@ -54,6 +57,11 @@ module RTA
     # @return [nil] 前回実行時にエラーなしの場合は nil
     attr_reader :sql_exception
 
+    # TransactionStatistic インスタンスを生成
+    # 
+    # @param [String] name トランザクション名
+    # @param [Hash]   stat_hash {TransactionStatistic} を表す +Hash+
+    # @return [TransactionStatistic]
     def initialize(name = "",
                    stat_hash = {:name => nil, :count => 0, :first_time => nil,
                                 :start_time => nil, :end_time => nil,
@@ -74,6 +82,10 @@ module RTA
       @sql_exception = stat_hash[:sql_exception]
     end
 
+    # トランザクション実行時に開始直前に呼ぶ.
+    # もし block が渡されていれば, そのブロックを実行.
+    # 
+    # @yield 実行するトランザクション
     def start
       @sql_exception = nil
       @start_time = Time.now
@@ -84,11 +96,15 @@ module RTA
       end
     end
 
+    # +SQLException+ を設定
+    # 
+    # @param [SQLException] exception トランザクション実行時に発生した +SQLException+
     def sql_exception=(exception)
       @sql_exception = exception
       @error_count += 1
     end
 
+    # トランザクション実行時に終了直後に呼ぶ
     def end
       @end_time = Time.now
       @count += 1
@@ -105,15 +121,25 @@ module RTA
       end
     end
 
+    # 実行時間の平均
+    # 
+    # @return [Float] 実行時間の平均
     def avg_elapsed_time
       return @count == 0 ? 0 : @total_elapsed_time / @count
     end
 
+    # 1 秒あたりの実行回数.
+    # Transaction Per Seconds.
+    # 
+    # @return [Float] 1 秒あたりの実行回数
     def tps
       actual_elapsed_time = @count == 0 ? 0 : @end_time - @first_time
       return actual_elapsed_time == 0 ? 0 : @count / actual_elapsed_time
     end
 
+    # 各統計情報を文字列にして返す
+    # 
+    # @return [String]
     def to_s
       return "tx: \"#{@name}\", " +
              "count: #{@count}, " +
@@ -128,6 +154,10 @@ module RTA
              "tps: #{tps}"
     end
 
+    # {TransactionStatistic} 同士の統計情報を加えて新たな {TransactionStatistic}
+    # インスタンスを生成
+    # 
+    # @return [TransactionStatistic]
     def +(stat)
       if stat.first_time.nil?
         ret = self.dup
@@ -164,6 +194,10 @@ module RTA
       end
     end
 
+    # 別時刻の時点の {TransactionStatistic} インスタンスの統計情報の差分を表す
+    # 新たな {TransactionStatistic} インスタンスを生成
+    # 
+    # @return [TransactionStatistic]
     def -(stat)
       if @name != stat.name || @first_time != stat.first_time
         raise "different statistic"
@@ -193,6 +227,7 @@ module RTA
     end
   end
 
+  # トランザクションを表すクラス
   class Transaction
     extend Forwardable
 
@@ -206,6 +241,9 @@ module RTA
     alias_method :stat, :statistic
 
     # トランザクションを生成
+    #
+    # @param [String] name トランザクション名
+    # @yield 実行するトランザクション
     # @return [Transaction]
     def initialize(name = "", &block)
       @statistic = TransactionStatistic.new(name)
@@ -250,4 +288,3 @@ module RTA
     end
   end
 end
-

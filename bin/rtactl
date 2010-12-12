@@ -13,7 +13,7 @@ then
   JRUBY_CMD="java $JAVA_OPTS -classpath $JRUBY_COMPLETE:$CLASSPATH org.jruby.Main"
 fi
 
-# 引数を配列を表す文字列 ARGV にする
+# 引数をカンマ区切りの文字列 ARGV にする
 ARGV=""
 for arg in "$@"
 do

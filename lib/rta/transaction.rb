@@ -144,7 +144,7 @@ module RTA
       return "tx: \"#{@name}\", " +
              "count: #{@count}, " +
              "error: #{@error_count}, " +
-             "start: \"#{time_to_str(@first_time)}\", " +
+             "first: \"#{time_to_str(@first_time)}\", " +
              "end: \"#{time_to_str(@end_time)}\", " +
              "elapsed: #{@elapsed_time}, " +
              "total: #{@total_elapsed_time}, " +

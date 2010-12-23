@@ -1,6 +1,10 @@
 #!/bin/sh
 
-RTA_HOME="`pwd`/`dirname $0`/../"
+RTA_HOME="`dirname $0`/../"
+echo $RTA_HOME | grep "^/" > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  RTA_HOME="`pwd`/$RTA_HOME"
+fi
 
 JRUBY_CMD=`which jruby 2>&1 | grep -v "no jruby"`
 if [ "$JRUBY_CMD" = "" ]

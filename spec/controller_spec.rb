@@ -121,9 +121,9 @@ describe RTA::Controller::Runner do
       RTA::Controller::Runner.run(*ex_argv)
     end
 
-    it "should launch CLI if command is \"cli\"" do
+    it "should launch console if command is \"console\"" do
       IRB.should_receive(:start)
-      ex_argv = "-p #{EX_PORT} cli".split
+      ex_argv = "-p #{EX_PORT} console".split
       RTA::Controller::Runner.run(*ex_argv)
     end
   end

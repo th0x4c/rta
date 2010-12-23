@@ -7,14 +7,14 @@ module RTA
   # コマンド制御用のモジュール
   module Controller
     # 実行できるコマンド
-    COMMANDS = ["start", "standby", "go", "stop", "cli"]
+    COMMANDS = ["start", "standby", "go", "stop", "console"]
 
     # バナー出力
     BANNER = "Usage: rtactl [options] <command> [<file>]\n\n" +
              "Example: rtactl -p 9000 -n 5 start example.rb\n" +
              "         rtactl -p 9000 go\n" +
              "         rtactl -p 9000 -s 3,4 standby\n" +
-             "         rtactl -p 9000 cli\n" +
+             "         rtactl -p 9000 console\n" +
              "         rtactl -p 9000 stop\n\n" +
              "Option: "
 
@@ -115,7 +115,7 @@ module RTA
             sm.go(opt.sids)
           when "stop"
             sm.stop(opt.sids)
-          when "cli"
+          when "console"
             $rta = sm
             IRB.start(__FILE__)
           end

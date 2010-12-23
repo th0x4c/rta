@@ -1,0 +1,6 @@
+# Configuration for load and tpcb script
+
+tpcb_user: tpcb
+tpcb_password: tpcb
+tpcb_url: jdbc:oracle:thin:@192.168.1.5:1521:XE
+branch_range: 1..3

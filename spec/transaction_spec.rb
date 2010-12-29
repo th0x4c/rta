@@ -212,6 +212,19 @@ describe RTA::Transaction do
       stat.count.should == 0 + TX_COUNT
     end
 
+    it "should calculate even if the receiver's (or arg's) end_time is nil" do
+      stat0 = @tx0.stat.dup
+      stat0.stub!(:first_time).and_return(@tx1.first_time)
+
+      stat =  stat0 + @tx.stat
+      stat.name.should ==  @tx0.name + @tx.name
+      stat.count.should == TX_COUNT + 0
+
+      stat = @tx.stat + stat0
+      stat.name.should == @tx.name + @tx0.name
+      stat.count.should == TX_COUNT + 0
+    end
+
     it "should not change receiver's statistics" do
       stat = @tx.stat + @tx1.stat
       @tx.name.should == "tx_name"

@@ -173,7 +173,20 @@ module RTA
         stat_hash[:count] = @count + stat.count
         stat_hash[:first_time] =
           @first_time < stat.first_time ? @first_time : stat.first_time
-        if @end_time > stat.end_time
+
+        receiver = true
+        if @end_time && stat.end_time
+          if @end_time > stat.end_time
+            receiver = true
+          else
+            receiver = false
+          end
+        elsif stat.end_time.nil?
+          receiver = true
+        else
+          receiver = false
+        end
+        if receiver
           stat_hash[:start_time] = @start_time
           stat_hash[:end_time] = @end_time
           stat_hash[:elapsed_time] = @elapsed_time
@@ -184,11 +197,19 @@ module RTA
           stat_hash[:elapsed_time] = stat.elapsed_time
           stat_hash[:sql_exception] = stat.sql_exception
         end
+
         stat_hash[:total_elapsed_time] = @total_elapsed_time + stat.total_elapsed_time
-        stat_hash[:max_elapsed_time] =
-          @max_elapsed_time > stat.max_elapsed_time ? @max_elapsed_time : stat.max_elapsed_time
-        stat_hash[:min_elapsed_time] =
-          @min_elapsed_time < stat.min_elapsed_time ? @min_elapsed_time : stat.min_elapsed_time
+
+        if @max_elapsed_time && stat.max_elapsed_time
+          stat_hash[:max_elapsed_time] =
+            @max_elapsed_time > stat.max_elapsed_time ? @max_elapsed_time : stat.max_elapsed_time
+          stat_hash[:min_elapsed_time] =
+            @min_elapsed_time < stat.min_elapsed_time ? @min_elapsed_time : stat.min_elapsed_time
+        else
+          stat_hash[:max_elapsed_time] = @max_elapsed_time || stat.max_elapsed_time
+          stat_hash[:min_elapsed_time] = @min_elapsed_time || stat.min_elapsed_time
+        end
+
         stat_hash[:error_count] = @error_count + stat.error_count
         return TransactionStatistic.new(nil, stat_hash)
       end

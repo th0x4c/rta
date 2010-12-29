@@ -1,0 +1,15 @@
+# Configuration for setup and teardown script
+
+SETUP_LOG=$TPCC_HOME/log/setup.log
+TEARDOWN_LOG=$TPCC_HOME/log/teardown.log
+
+TPCC_USER=tpcc
+TPCC_PASSWORD=tpcc
+TPCC_TNSNAME=XE
+
+TABLE_TABLESPACE=USERS
+INDEX_TABLESPACE=USERS
+
+RTACTL=$TPCC_HOME/../../bin/rtactl
+PARALLEL_LOAD_DEGREE=5
+RTA_PORT=9000

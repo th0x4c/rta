@@ -102,7 +102,7 @@ CREATE TABLE order_line
   ol_o_id        NUMBER(8, 0), -- 10,000,000 unique IDs
   ol_d_id        NUMBER(2, 0), -- 20 unique IDs
   ol_w_id        NUMBER,       -- 2*W unique IDs
-  ol_NUMBER      NUMBER(2, 0), -- 15 unique IDs
+  ol_number      NUMBER(2, 0), -- 15 unique IDs
   ol_i_id        NUMBER(6, 0), -- 200,000 unique IDs
   ol_supply_w_id NUMBER,       -- 2*W unique IDs
   ol_delivery_d  DATE,         -- date and time, or null

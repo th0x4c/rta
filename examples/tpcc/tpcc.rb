@@ -33,8 +33,6 @@ class TPCC < RTA::Session
     # tpcc_password: tpcc
     # tpcc_url: jdbc:oracle:thin:@192.168.1.5:1521:XE
     # warehouse_range: 1..10
-    # think_time: 0.01
-    # tx_percentage: [45.0, 43.0, 4.0, 4.0, 4.0]
     config = Hash.new
     File.open(TPCC_HOME + '/config/config.yml', 'r') do |file|
       config = YAML.load(file.read)
@@ -49,8 +47,8 @@ class TPCC < RTA::Session
     @think_time = config["think_time"]
     @tx_percentage = config["tx_percentage"]
     # @tx_percentage を % に変換. (合計が 100 となるようにする)
-    sum = @tx_percentage.inject(0) { |sum, pct| sum + pct }
-    @tx_percentage.map { |pct| (pct / sum.to_f) * 100 }
+    sum = @tx_percentage.values.inject(0) { |sum, pct| sum + pct }
+    @tx_percentage.each { |key, value| @tx_percentage[key] = (value / sum.to_f) * 100 }
 
     # 接続
     begin
@@ -65,19 +63,20 @@ class TPCC < RTA::Session
     end
 
     # Transaction
-    @neword = neword     # New-Order Transaction
-    @payment = payment   # Payment Transaction
-    @ostat = ostat       # Order-Status Transaction
-    @delivery = delivery # Delivery Transaction
-    @slev = slev         # Stock-Level Transaction
+    @tx = Hash.new
+    @tx["new_order"] = neword   # New-Order Transaction  
+    @tx["payment"] = payment    # Payment Transaction    
+    @tx["order_status"] = ostat # Order-Status Transaction
+    @tx["delivery"] = delivery  # Delivery Transaction   
+    @tx["stock_level"] = slev   # Stock-Level Transaction
   end
 
   def transaction
     rand_pct = rand * 100 # rand returns a pseudorandom floating point number
                           # greater than or equal to 0.0 and less than 1.0
     cul = 0
-    [@neword, @payment, @ostat, @delivery, @slev].each_with_index do |tx, idx|
-      cul += @tx_percentage[idx]
+    @tx.each do |tx_name, tx|
+      cul += @tx_percentage[tx_name]
       return tx if rand_pct < cul
     end
 
@@ -314,7 +313,7 @@ class TPCC < RTA::Session
       @input[:qty] = qty
     end
 
-    tx.after_each { sleep @think_time if @think_time > 0 }
+    tx.after_each { sleep(@think_time["new_order"] || 0) }
 
     tx.whenever_sqlerror do |ex|
       @con.rollback
@@ -329,7 +328,7 @@ class TPCC < RTA::Session
   def payment
     tx = RTA::Transaction.new("Payment") do
     end
-    tx.after_each { sleep @think_time if @think_time > 0 }
+    tx.after_each { sleep(@think_time["payment"] || 0) }
     tx.whenever_sqlerror { @con.rollback }
     return tx
   end
@@ -338,7 +337,7 @@ class TPCC < RTA::Session
   def ostat
     tx = RTA::Transaction.new("Order-Status") do
     end
-    tx.after_each { sleep @think_time if @think_time > 0 }
+    tx.after_each { sleep(@think_time["order_status"] || 0) }
     tx.whenever_sqlerror { @con.rollback }
     return tx
   end
@@ -347,7 +346,7 @@ class TPCC < RTA::Session
   def delivery
     tx = RTA::Transaction.new("Delivery") do
     end
-    tx.after_each { sleep @think_time if @think_time > 0 }
+    tx.after_each { sleep(@think_time["delivery"] || 0) }
     tx.whenever_sqlerror { @con.rollback }
     return tx
   end
@@ -396,7 +395,7 @@ class TPCC < RTA::Session
       @input[:threshold] = random_number(10, 20)
     end
 
-    tx.after_each { sleep @think_time if @think_time > 0 }
+    tx.after_each { sleep(@think_time["stock_level"] || 0) }
 
     tx.whenever_sqlerror do
       @con.rollback

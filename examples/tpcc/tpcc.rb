@@ -64,11 +64,11 @@ class TPCC < RTA::Session
 
     # Transaction
     @tx = Hash.new
-    @tx["new_order"] = neword   # New-Order Transaction  
-    @tx["payment"] = payment    # Payment Transaction    
-    @tx["order_status"] = ostat # Order-Status Transaction
-    @tx["delivery"] = delivery  # Delivery Transaction   
-    @tx["stock_level"] = slev   # Stock-Level Transaction
+    @tx["new_order"] = @neword = neword    # New-Order Transaction  
+    @tx["payment"] = @payment = payment    # Payment Transaction    
+    @tx["order_status"] = @ostat = ostat   # Order-Status Transaction
+    @tx["delivery"] = @delivery = delivery # Delivery Transaction   
+    @tx["stock_level"] = @slev =slev       # Stock-Level Transaction
   end
 
   def transaction

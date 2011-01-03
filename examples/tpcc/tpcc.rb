@@ -243,25 +243,39 @@ class TPCC < RTA::Session
           bg[ol_number] = 'G'
         end
 
-        if s_quantity > ol_quantity
+        # If the retrieved value for S_QUANTITY exceeds OL_QUANTITY by 10 or
+        # more, then S_QUANTITY is decreased by OL_QUANTITY; otherwise
+        # S_QUANTITY is updated to (S_QUANTITY - OL_QUANTITY)+91.
+        if s_quantity >= ol_quantity + 10
           s_quantity = s_quantity - ol_quantity
         else
           s_quantity = s_quantity - ol_quantity + 91
         end
 
-        sql8 = "UPDATE stock SET s_quantity = ? " +
+        # S_YTD is increased by OL_QUANTITY and S_ORDER_CNT is incremented by 1.
+        # If the order-line is remote, then S_REMOTE_CNT is incremented by 1.
+        remote = (@input[:w_id] != ol_supply_w_id) ? 1 : 0
+        sql8 = "UPDATE stock SET s_quantity = ?, " +
+               "  s_ytd = s_ytd + ?, s_order_cnt = s_order_cnt + 1, " +
+               "  s_remote_cnt = s_remote_cnt + ? " +
                "WHERE s_i_id = ? " +
                "AND s_w_id = ?"
         stmt8 = @con.prepareStatement(sql8)
         stmt8.setInt(1, s_quantity)
-        stmt8.setInt(2, ol_i_id)
-        stmt8.setInt(3, ol_supply_w_id)
+        stmt8.setInt(2, ol_quantity)
+        stmt8.setInt(3, remote)
+        stmt8.setInt(4, ol_i_id)
+        stmt8.setInt(5, ol_supply_w_id)
         stmt8.executeUpdate
         stmt8.close
 
-        ol_amount = ol_quantity * price[ol_number] * (1 + w_tax + d_tax) * (1 - c_discount)
+        # The amount for the item in the order (OL_AMOUNT) is computed as:
+        #   OL_QUANTITY*I_PRICE
+        ol_amount = ol_quantity * price[ol_number]
         amt[ol_number] = ol_amount
-        total += ol_amount
+        # The total-amount for the complete order is computed as:
+        #   sum(OL_AMOUNT) *(1 - C_DISCOUNT) *(1 + W_TAX + D_TAX)
+        total += ol_amount * (1 + w_tax + d_tax) * (1 - c_discount)
 
         sql9 = "INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, " +
                "  ol_i_id, ol_supply_w_id, " +
@@ -344,9 +358,275 @@ class TPCC < RTA::Session
   # Payment Transaction
   def payment
     tx = RTA::Transaction.new("Payment") do
+      datetime = java.sql.Timestamp.new(Time.now.to_f * 1000)
+
+      sql1 = "UPDATE warehouse SET w_ytd = w_ytd + ? " +
+             "WHERE w_id = ?"
+      stmt1 = @con.prepareStatement(sql1)
+      stmt1.setFloat(1, @input[:h_amount])
+      stmt1.setInt(2, @input[:w_id])
+      stmt1.executeUpdate
+      stmt1.close
+
+      sql2 = "SELECT w_street_1, w_street_2, w_city, w_state, w_zip, w_name " +
+             "FROM warehouse " +
+             "WHERE w_id = ?"
+      stmt2 = @con.prepareStatement(sql2)
+      stmt2.setInt(1, @input[:w_id])
+      rset = stmt2.executeQuery
+      while rset.next
+        w_street_1 = rset.getString("w_street_1")
+        w_street_2 = rset.getString("w_street_2")
+        w_city = rset.getString("w_city")
+        w_state = rset.getString("w_state")
+        w_zip = rset.getString("w_zip")
+        w_name = rset.getString("w_name")
+      end
+      rset.close
+      stmt2.close
+
+      sql3 = "UPDATE district SET d_ytd = d_ytd + ? " +
+             "WHERE d_w_id = ? AND d_id = ?"
+      stmt3 = @con.prepareStatement(sql3)
+      stmt3.setFloat(1, @input[:h_amount])
+      stmt3.setInt(2, @input[:w_id])
+      stmt3.setInt(3, @input[:d_id])
+      stmt3.executeUpdate
+      stmt3.close
+
+      sql4 = "SELECT d_street_1, d_street_2, d_city, d_state, d_zip, d_name " +
+             "FROM district " +
+             "WHERE d_w_id = ? AND d_id = ?"
+      stmt4 = @con.prepareStatement(sql4)
+      stmt4.setInt(1, @input[:w_id])
+      stmt4.setInt(2, @input[:d_id])
+      rset = stmt4.executeQuery
+      while rset.next
+        d_street_1 = rset.getString("d_street_1")
+        d_street_2 = rset.getString("d_street_2")
+        d_city = rset.getString("d_city")
+        d_state = rset.getString("d_state")
+        d_zip = rset.getString("d_zip")
+        d_name = rset.getString("d_name")
+      end
+      rset.close
+      stmt4.close
+
+      c_id = @input[:c_id]
+      if @input[:byname]
+        sql5 = "SELECT count(c_id) " +
+               "FROM customer " +
+               "WHERE c_last = ? AND c_d_id = ? AND c_w_id = ?"
+        stmt5 = @con.prepareStatement(sql5)
+        stmt5.setString(1, @input[:c_last])
+        stmt5.setInt(2, @input[:c_d_id])
+        stmt5.setInt(3, @input[:c_w_id])
+        rset = stmt5.executeQuery
+        while rset.next
+          namecnt = rset.getInt(1)
+        end
+        rset.close
+        stmt5.close
+
+        sql6 = "SELECT c_first, c_middle, c_id, " +
+               "  c_street_1, c_street_2, c_city, c_state, c_zip, " +
+               "  c_phone, c_credit, c_credit_lim, " +
+               "  c_discount, c_balance, c_since " +
+               "FROM customer " +
+               "WHERE c_w_id = ? AND c_d_id = ? AND c_last = ? " +
+               "ORDER BY c_first"
+        stmt6 = @con.prepareStatement(sql6)
+        stmt6.setInt(1, @input[:c_w_id])
+        stmt6.setInt(2, @input[:c_d_id])
+        stmt6.setString(3, @input[:c_last])
+        c_byname = stmt6.executeQuery
+
+        namecnt += 1 if namecnt % 2
+        (namecnt / 2).times do |n|
+          c_byname.next
+          c_first = c_byname.getString("c_first")
+          c_middle = c_byname.getString("c_middle")
+          c_id = c_byname.getInt("c_id")
+          c_street_1 = c_byname.getString("c_street_1")
+          c_street_2 = c_byname.getString("c_street_2")
+          c_city = c_byname.getString("c_city")
+          c_state = c_byname.getString("c_state")
+          c_zip = c_byname.getString("c_zip")
+          c_phone = c_byname.getString("c_phone")
+          c_credit = c_byname.getString("c_credit")
+          c_credit_lim = c_byname.getFloat("c_credit_lim")
+          c_discount = c_byname.getFloat("c_discount")
+          c_balance = c_byname.getFloat("c_balance")
+          c_since = c_byname.getTimestamp("c_since")
+        end
+        c_byname.close
+        stmt6.close
+      else
+        sql7 = "SELECT c_first, c_middle, c_last, " +
+               "  c_street_1, c_street_2, c_city, c_state, c_zip, " +
+               "  c_phone, c_credit, c_credit_lim, " +
+               "  c_discount, c_balance, c_since " +
+               "FROM customer " +
+               "WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?"
+        stmt7 = @con.prepareStatement(sql7)
+        stmt7.setInt(1, @input[:c_w_id])
+        stmt7.setInt(2, @input[:c_d_id])
+        stmt7.setInt(3, @input[:c_id])
+        rset = stmt7.executeQuery
+        while rset.next
+          c_first = rset.getString("c_first")
+          c_middle = rset.getString("c_middle")
+          c_last = rset.getString("c_last")
+          c_street_1 = rset.getString("c_street_1")
+          c_street_2 = rset.getString("c_street_2")
+          c_city = rset.getString("c_city")
+          c_state = rset.getString("c_state")
+          c_zip = rset.getString("c_zip")
+          c_phone = rset.getString("c_phone")
+          c_credit = rset.getString("c_credit")
+          c_credit_lim = rset.getFloat("c_credit_lim")
+          c_discount = rset.getFloat("c_discount")
+          c_balance = rset.getFloat("c_balance")
+          c_since = rset.getTimestamp("c_since")
+        end
+        rset.close
+        stmt7.close
+      end
+
+      if c_credit == "BC"
+        sql8 = "SELECT c_data " +
+               "FROM customer " +
+               "WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?"
+        stmt8 = @con.prepareStatement(sql8)
+        stmt8.setInt(1, @input[:c_w_id])
+        stmt8.setInt(2, @input[:c_d_id])
+        stmt8.setInt(3, c_id)
+        rset = stmt8.executeQuery
+        while rset.next
+          c_data = rset.getString("c_data")
+        end
+        rset.close
+        stmt8.close
+
+        # If the value of C_CREDIT is equal to "BC", then C_DATA is also
+        # retrieved from the selected customer and the following history
+        # information: C_ID, C_D_ID, C_W_ID, D_ID, W_ID, and H_AMOUNT, are
+        # inserted at the left of the C_DATA field by shifting the existing
+        # content of C_DATA to the right by an equal number of bytes and by
+        # discarding the bytes that are shifted out of the right side of the
+        # C_DATA field. The content of the C_DATA field never exceeds 500
+        # characters. The selected customer is updated with the new C_DATA field.
+        # If C_DATA is implemented as two fields (see Clause 1.4.9), they must
+        # be treated and operated on as one single field.
+        c_new_data = ["|", c_id, @input[:c_d_id], @input[:c_w_id],
+                      @input[:d_id], @input[:w_id], @input[:h_amount]].join(" ")
+        c_new_data = (c_new_data + c_data)[0, 500]
+
+        # C_BALANCE is decreased by H_AMOUNT. C_YTD_PAYMENT is increased by
+        # H_AMOUNT. C_PAYMENT_CNT is incremented by 1.
+        sql9 = "UPDATE customer " +
+               "SET c_balance = c_balance - ?, c_data = ?, " +
+               "  c_ytd_payment = c_ytd_payment + ?, c_payment_cnt = c_payment_cnt + 1 " +
+               "WHERE c_w_id = ? AND c_d_id = ? AND " +
+               "  c_id = ?"
+        stmt9 = @con.prepareStatement(sql9)
+        stmt9.setFloat(1, @input[:h_amount])
+        stmt9.setString(2, c_new_data)
+        stmt9.setFloat(3, @input[:h_amount])
+        stmt9.setInt(4, @input[:c_w_id])
+        stmt9.setInt(5, @input[:c_d_id])
+        stmt9.setInt(6, c_id)
+        stmt9.executeUpdate
+        stmt9.close
+      else
+        # C_BALANCE is decreased by H_AMOUNT. C_YTD_PAYMENT is increased by
+        # H_AMOUNT. C_PAYMENT_CNT is incremented by 1.
+        sql10 = "UPDATE customer " +
+                "SET c_balance = c_balance - ?, " +
+               "  c_ytd_payment = c_ytd_payment + ?, c_payment_cnt = c_payment_cnt + 1 " +
+                "WHERE c_w_id = ? AND c_d_id = ? AND " +
+                "  c_id = ?"
+        stmt10 = @con.prepareStatement(sql10)
+        stmt10.setFloat(1, @input[:h_amount])
+        stmt10.setFloat(2, @input[:h_amount])
+        stmt10.setInt(3, @input[:c_w_id])
+        stmt10.setInt(4, @input[:c_d_id])
+        stmt10.setInt(5, c_id)
+        stmt10.executeUpdate
+        stmt10.close
+      end
+
+      # H_DATA is built by concatenating W_NAME and D_NAME separated by 4 spaces.
+      h_data = w_name + "    " + d_name
+
+      sql11 = "INSERT INTO history (h_c_d_id, h_c_w_id, h_c_id, h_d_id, " +
+              "  h_w_id, h_date, h_amount, h_data) " +
+              "VALUES (?, ?, ?, ?, " +
+              "  ?, ?, ?, ?)"
+      stmt11 = @con.prepareStatement(sql11)
+      stmt11.setInt(1, @input[:c_d_id])
+      stmt11.setInt(2, @input[:c_w_id])
+      stmt11.setInt(3, c_id)
+      stmt11.setInt(4, @input[:d_id])
+      stmt11.setInt(5, @input[:w_id])
+      stmt11.setTimestamp(6, datetime)
+      stmt11.setFloat(7, @input[:h_amount])
+      stmt11.setString(8, h_data)
+      stmt11.executeUpdate
+      stmt11.close
+
+      @con.commit
     end
+
+    tx.before_each do
+      w_id = home_w_id
+      d_id = random_number(1, DIST_PER_WARE)
+
+      x = random_number(1, 100)
+      y = random_number(1, 100)
+      if x <= 85
+        c_d_id = d_id
+        c_w_id = w_id
+        home = true
+      else
+        c_d_id = random_number(1, DIST_PER_WARE)
+        if count_ware > 1
+          ary = Array(@first_w_id .. @last_w_id) - [w_id]
+          c_w_id = ary[rand(ary.size)]
+          home = false
+        else
+          c_w_id = w_id
+          home = true
+        end
+      end
+      if y <= 60
+        c_last = lastname(nurand(255, 0, 999))
+        byname = true
+      else
+        c_id = nurand(1023, 1, CUST_PER_DIST)
+        byname = false
+      end
+
+      h_amount = random_number(100, 500000) / 100.0
+
+      @input = Hash.new
+      @input[:w_id] = w_id
+      @input[:d_id] = d_id
+      @input[:c_d_id] = c_d_id
+      @input[:c_w_id] = c_w_id
+      @input[:c_last] = c_last
+      @input[:c_id] = c_id
+      @input[:byname] = byname
+      @input[:h_amount] = h_amount
+    end
+
     tx.after_each { sleep(@think_time["payment"] || 0) }
-    tx.whenever_sqlerror { @con.rollback }
+
+    tx.whenever_sqlerror do |ex|
+      @con.rollback
+      log.debug(YAML.dump(@input).chomp)
+    end
+
     return tx
   end
 
@@ -432,6 +712,11 @@ class TPCC < RTA::Session
 
   def random_number(min, max)
     return min + rand(max - min + 1)
+  end
+
+  def lastname(num)
+    name = ["BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING"]
+    return name[num / 100] + name[(num / 10) % 10] + name[num % 10]
   end
 
   def nurand(a, x, y)

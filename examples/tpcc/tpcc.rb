@@ -26,13 +26,26 @@ class TPCC < RTA::Session
     # self.log.level = RTA::Log::DEBUG
 
     # config.yml の例
-    # --
+    # ---
     # Configuration for load and tpcc script
     #
     # tpcc_user: tpcc
     # tpcc_password: tpcc
     # tpcc_url: jdbc:oracle:thin:@192.168.1.5:1521:XE
     # warehouse_range: 1..10
+    # think_time: # Think time
+    #   new_order:    0.01  # New-Order
+    #   payment:      0.01  # Payment
+    #   order_status: 0.01  # Order-Status
+    #   delivery:     0.01  # Delivery
+    #   stock_level:  0.01  # Stock-Level
+    #
+    # tx_percentage: # Percentage of each transaction
+    #   new_order:    45.0  # New-Order
+    #   payment:      43.0  # Payment
+    #   order_status:  4.0  # Order-Status
+    #   delivery:      4.0  # Delivery
+    #   stock_level:   4.0  # Stock-Level
     config = Hash.new
     File.open(TPCC_HOME + '/config/config.yml', 'r') do |file|
       config = YAML.load(file.read)
@@ -46,7 +59,7 @@ class TPCC < RTA::Session
     end
     @think_time = config["think_time"]
     @tx_percentage = config["tx_percentage"]
-    # @tx_percentage を % に変換. (合計が 100 となるようにする)
+    # @tx_percentage を % に変換(合計が 100 となるようにする)
     sum = @tx_percentage.values.inject(0) { |sum, pct| sum + pct }
     @tx_percentage.each { |key, value| @tx_percentage[key] = (value / sum.to_f) * 100 }
 
@@ -64,11 +77,11 @@ class TPCC < RTA::Session
 
     # Transaction
     @tx = Hash.new
-    @tx["new_order"] = @neword = neword    # New-Order Transaction  
-    @tx["payment"] = @payment = payment    # Payment Transaction    
-    @tx["order_status"] = @ostat = ostat   # Order-Status Transaction
-    @tx["delivery"] = @delivery = delivery # Delivery Transaction   
-    @tx["stock_level"] = @slev =slev       # Stock-Level Transaction
+    @tx["new_order"] = neword   # New-Order Transaction  
+    @tx["payment"] = payment    # Payment Transaction    
+    @tx["order_status"] = ostat # Order-Status Transaction
+    @tx["delivery"] = delivery  # Delivery Transaction   
+    @tx["stock_level"] = slev   # Stock-Level Transaction
   end
 
   def transaction
@@ -80,13 +93,17 @@ class TPCC < RTA::Session
       return tx if rand_pct < cul
     end
 
-    # Unreachable unless all transaction percentages are 0.
+    # Unreachable unless all transaction percentages are 0
     log.fatal("No transaction available")
     raise "No transaction available"
   end
 
   def teardown
     @con.close
+  end
+
+  def transactions
+    return @tx.values
   end
 
   # New-Order Transaction

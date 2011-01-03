@@ -3,16 +3,12 @@ require 'thread'
 require 'java'
 import java.sql.Date
 
+require File.dirname(__FILE__) + '/helper'
+
 class TPCCLoad < RTA::Session
-  TPCC_HOME = File.dirname(__FILE__) + '/../'
-  MAXITEMS = 100000
-  CUST_PER_DIST = 3000
-  DIST_PER_WARE = 10
-  ORD_PER_DIST = 3000
+  include TPCCHelper
 
   INSERTS_PER_COMMIT = 100
-
-  CNUM = 1
 
   @@mutex = Mutex.new
   @@count_ware = 0
@@ -549,10 +545,6 @@ class TPCCLoad < RTA::Session
     return Array.new(random_number(min, max)) { charset[rand(charset.size)] }.join
   end
 
-  def random_number(min, max)
-    return min + rand(max - min + 1)
-  end
-
   def make_address
     return make_alpha_string(10, 20), make_alpha_string(10, 20), make_alpha_string(10, 20), make_alpha_string(2, 2), make_number_string(9, 9)
   end
@@ -560,15 +552,6 @@ class TPCCLoad < RTA::Session
   def insert_original!(str)
     pos = random_number(0, str.size - "original".size)
     str[pos, "original".size] = "original"
-  end
-
-  def lastname(num)
-    name = ["BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING"]
-    return name[num / 100] + name[(num / 10) % 10] + name[num % 10]
-  end
-
-  def nurand(a, x, y)
-    return ((((random_number(0, a) | random_number(x, y)) + CNUM) % (y - x + 1)) + x)
   end
 
   def init_permutation

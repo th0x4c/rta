@@ -151,8 +151,8 @@ class TPCC < RTA::Session
       o_id = d_next_o_id
 
       sql4 = "INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, " +
-             "  o_entry_d, o_ol_cnt, o_all_local) " +
-             "VALUES (?, ?, ?, ?, ?, ?, ?)"
+             "  o_entry_d, o_carrier_id, o_ol_cnt, o_all_local) " +
+             "VALUES (?, ?, ?, ?, ?, NULL, ?, ?)"
       stmt4 = @con.prepareStatement(sql4)
       stmt4.setInt(1, o_id)
       stmt4.setInt(2, @input[:d_id])

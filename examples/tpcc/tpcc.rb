@@ -12,6 +12,9 @@ class TPCC < RTA::Session
   INVALID_ITEM_ERROR_CODE = -1
   INVALID_ITEM_SQL_EXCEPTION = SQLException.new.initCause(SQLException.new("Item number is not valid", nil, INVALID_ITEM_ERROR_CODE))
 
+  NOT_FOUND_ERROR_CODE = -2
+  NOT_FOUND_SQL_EXCEPTION = SQLException.new.initCause(SQLException.new("Not found", nil, NOT_FOUND_ERROR_CODE))
+
   @@mutex = Mutex.new
   @@truncate_history = false
   @@time_str = Time.now.strftime("%Y%m%d%H%M%S")
@@ -116,14 +119,17 @@ class TPCC < RTA::Session
       stmt1.setInt(2, @input[:d_id])
       stmt1.setInt(3, @input[:c_id])
       rset = stmt1.executeQuery
+      rownum = 0
       while rset.next
         c_discount = rset.getFloat("c_discount")
         c_last = rset.getString("c_last")
         c_credit = rset.getString("c_credit")
         w_tax = rset.getFloat("w_tax")
+        rownum += 1
       end
       rset.close
       stmt1.close
+      raise NOT_FOUND_SQL_EXCEPTION if rownum == 0
 
       sql2 = "SELECT d_next_o_id, d_tax " +
              "FROM district "+
@@ -132,12 +138,15 @@ class TPCC < RTA::Session
       stmt2.setInt(1, @input[:d_id])
       stmt2.setInt(2, @input[:w_id])
       rset = stmt2.executeQuery
+      rownum = 0
       while rset.next
         d_next_o_id = rset.getInt("d_next_o_id")
         d_tax = rset.getFloat("d_tax")
+        rownum += 1
       end
       rset.close
       stmt2.close
+      raise NOT_FOUND_SQL_EXCEPTION if rownum == 0
 
       sql3 = "UPDATE district SET d_next_o_id = ? + 1 " +
              "WHERE d_id = ? AND d_w_id = ?"
@@ -199,9 +208,7 @@ class TPCC < RTA::Session
         end
         rset.close
         stmt6.close
-        if rownum == 0
-          raise INVALID_ITEM_SQL_EXCEPTION
-        end
+        raise INVALID_ITEM_SQL_EXCEPTION if rownum == 0
 
         sql7 =  "SELECT s_quantity, s_data, " +
                 "  s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, " +
@@ -213,6 +220,7 @@ class TPCC < RTA::Session
         stmt7.setInt(2, ol_supply_w_id)
         rset = stmt7.executeQuery
         s_dist_xx = Array.new
+        rownum = 0
         while rset.next
           s_quantity = rset.getInt("s_quantity")
           s_data = rset.getString("s_data")
@@ -226,9 +234,11 @@ class TPCC < RTA::Session
           s_dist_xx << rset.getString("s_dist_08")
           s_dist_xx << rset.getString("s_dist_09")
           s_dist_xx << rset.getString("s_dist_10")
+          rownum += 1
         end
         rset.close
         stmt7.close
+        raise NOT_FOUND_SQL_EXCEPTION if rownum == 0
 
         ol_dist_info = s_dist_xx[@input[:d_id] - 1] # pick correct s_dist_xx
         stock[ol_number] = s_quantity
@@ -370,6 +380,7 @@ class TPCC < RTA::Session
       stmt2 = @con.prepareStatement(sql2)
       stmt2.setInt(1, @input[:w_id])
       rset = stmt2.executeQuery
+      rownum = 0
       while rset.next
         w_street_1 = rset.getString("w_street_1")
         w_street_2 = rset.getString("w_street_2")
@@ -377,9 +388,11 @@ class TPCC < RTA::Session
         w_state = rset.getString("w_state")
         w_zip = rset.getString("w_zip")
         w_name = rset.getString("w_name")
+        rownum += 1
       end
       rset.close
       stmt2.close
+      raise NOT_FOUND_SQL_EXCEPTION if rownum == 0
 
       sql3 = "UPDATE district SET d_ytd = d_ytd + ? " +
              "WHERE d_w_id = ? AND d_id = ?"
@@ -397,6 +410,7 @@ class TPCC < RTA::Session
       stmt4.setInt(1, @input[:w_id])
       stmt4.setInt(2, @input[:d_id])
       rset = stmt4.executeQuery
+      rownum = 0
       while rset.next
         d_street_1 = rset.getString("d_street_1")
         d_street_2 = rset.getString("d_street_2")
@@ -404,9 +418,11 @@ class TPCC < RTA::Session
         d_state = rset.getString("d_state")
         d_zip = rset.getString("d_zip")
         d_name = rset.getString("d_name")
+        rownum += 1
       end
       rset.close
       stmt4.close
+      raise NOT_FOUND_SQL_EXCEPTION if rownum == 0
 
       c_id = @input[:c_id]
       if @input[:byname]
@@ -423,6 +439,7 @@ class TPCC < RTA::Session
         end
         rset.close
         stmt5.close
+        raise NOT_FOUND_SQL_EXCEPTION if namecnt == 0
 
         sql6 = "SELECT c_first, c_middle, c_id, " +
                "  c_street_1, c_street_2, c_city, c_state, c_zip, " +
@@ -437,7 +454,7 @@ class TPCC < RTA::Session
         stmt6.setString(3, @input[:c_last])
         c_byname = stmt6.executeQuery
 
-        namecnt += 1 if namecnt % 2
+        namecnt += 1 if namecnt % 2 == 1
         (namecnt / 2).times do |n|
           c_byname.next
           c_first = c_byname.getString("c_first")
@@ -469,6 +486,7 @@ class TPCC < RTA::Session
         stmt7.setInt(2, @input[:c_d_id])
         stmt7.setInt(3, @input[:c_id])
         rset = stmt7.executeQuery
+        rownum = 0
         while rset.next
           c_first = rset.getString("c_first")
           c_middle = rset.getString("c_middle")
@@ -484,9 +502,11 @@ class TPCC < RTA::Session
           c_discount = rset.getFloat("c_discount")
           c_balance = rset.getFloat("c_balance")
           c_since = rset.getTimestamp("c_since")
+          rownum += 1
         end
         rset.close
         stmt7.close
+        raise NOT_FOUND_SQL_EXCEPTION if rownum == 0
       end
 
       if c_credit == "BC"
@@ -498,11 +518,14 @@ class TPCC < RTA::Session
         stmt8.setInt(2, @input[:c_d_id])
         stmt8.setInt(3, c_id)
         rset = stmt8.executeQuery
+        rownum = 0
         while rset.next
           c_data = rset.getString("c_data")
+          rownum += 1
         end
         rset.close
         stmt8.close
+        raise NOT_FOUND_SQL_EXCEPTION if rownum == 0
 
         # If the value of C_CREDIT is equal to "BC", then C_DATA is also
         # retrieved from the selected customer and the following history
@@ -618,7 +641,7 @@ class TPCC < RTA::Session
 
     tx.after_each { sleep(@think_time["payment"] || 0) }
 
-    tx.whenever_sqlerror do |ex|
+    tx.whenever_sqlerror do
       @con.rollback
       log.debug(YAML.dump(@input).chomp)
     end
@@ -629,18 +652,297 @@ class TPCC < RTA::Session
   # Order-Status Transaction
   def ostat
     tx = RTA::Transaction.new("Order-Status") do
+      c_id = @input[:c_id]
+      if @input[:byname]
+        sql1 = "SELECT count(c_id) " +
+               "FROM customer " +
+               "WHERE c_last = ? AND c_d_id = ? AND c_w_id = ?"
+        stmt1 = @con.prepareStatement(sql1)
+        stmt1.setString(1, @input[:c_last])
+        stmt1.setInt(2, @input[:d_id])
+        stmt1.setInt(3, @input[:w_id])
+        rset = stmt1.executeQuery
+        while rset.next
+          namecnt = rset.getInt(1)
+        end
+        rset.close
+        stmt1.close
+        raise NOT_FOUND_SQL_EXCEPTION if namecnt == 0
+
+        sql2 = "SELECT c_balance, c_first, c_middle, c_id " +
+               "FROM customer " +
+               "WHERE c_last = ? AND c_d_id = ? AND c_w_id = ?" +
+               "ORDER BY c_first"
+        stmt2 = @con.prepareStatement(sql2)
+        stmt2.setString(1, @input[:c_last])
+        stmt2.setInt(2, @input[:d_id])
+        stmt2.setInt(3, @input[:w_id])
+        c_name = stmt2.executeQuery
+
+        namecnt += 1 if namecnt % 2 == 1
+        (namecnt / 2).times do |n|
+          c_name.next
+          c_balance = c_name.getFloat("c_balance")
+          c_first = c_name.getString("c_first")
+          c_middle = c_name.getString("c_middle")
+          c_id = c_name.getInt("c_id")
+        end
+        c_name.close
+        stmt2.close
+      else
+        sql3 = "SELECT c_balance, c_first, c_middle, c_last " +
+               "FROM customer " +
+               "WHERE c_id = ? AND c_d_id = ? AND c_w_id = ?"
+        stmt3 = @con.prepareStatement(sql3)
+        stmt3.setInt(1, @input[:c_id])
+        stmt3.setInt(2, @input[:d_id])
+        stmt3.setInt(3, @input[:w_id])
+        rset = stmt3.executeQuery
+        rownum = 0
+        while rset.next
+          c_balance = rset.getFloat("c_balance")
+          c_first = rset.getString("c_first")
+          c_middle = rset.getString("c_middle")
+          c_last = rset.getString("c_last")
+          rownum += 1
+        end
+        rset.close
+        stmt3.close
+        raise NOT_FOUND_SQL_EXCEPTION if rownum == 0
+      end
+
+      # The row in the ORDER table with matching O_W_ID (equals C_W_ID), O_D_ID
+      # (equals C_D_ID), O_C_ID (equals C_ID), and with the largest existing
+      # O_ID, is selected. This is the most recent order placed by that customer.
+      # O_ID, O_ENTRY_D, and O_CARRIER_ID are retrieved.
+      sql4 = "SELECT o_id, o_carrier_id, o_entry_d " +
+             "FROM orders " +
+             "WHERE o_w_id = ? AND o_d_id = ? AND o_c_id = ? AND " +
+             "  o_id = (SELECT MAX(o_id) FROM orders " +
+             "          WHERE o_w_id = ? AND o_d_id = ? AND o_c_id = ?)"
+      stmt4 = @con.prepareStatement(sql4)
+      stmt4.setInt(1, @input[:w_id])
+      stmt4.setInt(2, @input[:d_id])
+      stmt4.setInt(3, c_id)
+      stmt4.setInt(4, @input[:w_id])
+      stmt4.setInt(5, @input[:d_id])
+      stmt4.setInt(6, c_id)
+      rset = stmt4.executeQuery
+      rownum = 0
+      while rset.next
+        o_id = rset.getInt("o_id")
+        o_carrier_id = rset.getInt("o_carrier_id")
+        entdate = rset.getTimestamp("o_entry_d")
+        rownum += 1
+      end
+      rset.close
+      stmt4.close
+      raise NOT_FOUND_SQL_EXCEPTION if rownum == 0
+
+      sql5 = "SELECT ol_i_id, ol_supply_w_id, ol_quantity, " +
+             "  ol_amount, ol_delivery_d " +
+             "FROM order_line " +
+             "WHERE ol_o_id = ? AND ol_d_id = ? AND ol_w_id = ?"
+      stmt5 = @con.prepareStatement(sql5)
+      stmt5.setInt(1, o_id)
+      stmt5.setInt(2, @input[:d_id])
+      stmt5.setInt(3, @input[:w_id])
+      c_line = stmt5.executeQuery
+      ol_i_id = Array.new
+      ol_supply_w_id = Array.new
+      ol_quantity = Array.new
+      ol_amount = Array.new
+      ol_delivery_d = Array.new
+      while c_line.next
+        ol_i_id << c_line.getInt("ol_i_id")
+        ol_supply_w_id << c_line.getInt("ol_supply_w_id")
+        ol_quantity << c_line.getInt("ol_quantity") 
+        ol_amount << c_line.getFloat("ol_amount") 
+        ol_delivery_d << c_line.getTimestamp("ol_delivery_d")
+      end
+      c_line.close
+      stmt5.close
+
+      # Comment: a commit is not required as long as all ACID properties are
+      # satisfied (see Clause 3).
+      # @con.commit
     end
+
+    tx.before_each do
+      w_id = home_w_id
+      d_id = random_number(1, DIST_PER_WARE)
+
+      y = random_number(1, 100)
+      if y <= 60
+        c_last = lastname(nurand(255, 0, 999))
+        byname = true
+      else
+        c_id = nurand(1023, 1, CUST_PER_DIST)
+        byname = false
+      end
+
+      @input = Hash.new
+      @input[:w_id] = w_id
+      @input[:d_id] = d_id
+      @input[:c_last] = c_last
+      @input[:c_id] = c_id
+      @input[:byname] = byname
+    end
+
     tx.after_each { sleep(@think_time["order_status"] || 0) }
-    tx.whenever_sqlerror { @con.rollback }
+
+    tx.whenever_sqlerror do
+      @con.rollback
+      log.debug(YAML.dump(@input).chomp)
+    end
+
     return tx
   end
 
   # Delivery Transaction
   def delivery
     tx = RTA::Transaction.new("Delivery") do
+      datetime = java.sql.Timestamp.new(Time.now.to_f * 1000)
+
+      # Upon completion of the business transaction, the following information
+      # must have been recorded into a result file:
+      #   o The time at which the business transaction was queued.
+      #   o The warehouse number (W_ID) and the carried number (O_CARRIER_ID)
+      #     associated with the business transaction.
+      #   o The district number (D_ID) and the order number (O_ID) of each order
+      #     delivered by the business transaction.
+      #   o The time at which the business transaction completed.
+      log.info("W: #{@input[:w_id]}, C: #{@input[:o_carrier_id]}")
+
+      1.upto(DIST_PER_WARE) do |d_id|
+        # The row in the NEW-ORDER table with matching NO_W_ID (equals W_ID) and
+        # NO_D_ID (equals D_ID) and with the lowest NO_O_ID value is selected.
+        # This is the oldest undelivered order of that district. NO_O_ID, the
+        # order number, is retrieved. If no matching row is found, then the
+        # delivery of an order for this district is skipped.
+        sql1 = "SELECT MIN(no_o_id) " +
+               "FROM new_order " +
+               "WHERE no_d_id = ? AND no_w_id = ?"
+        stmt1 = @con.prepareStatement(sql1)
+        stmt1.setInt(1, d_id)
+        stmt1.setInt(2, @input[:w_id])
+        c_no = stmt1.executeQuery
+        rownum = 0
+        nullrow = true
+        while c_no.next
+          no_o_id = c_no.getInt(1)
+          rownum += 1
+          nullrow = false unless c_no.wasNull
+        end
+        c_no.close
+        stmt1.close
+        next if rownum == 0 || nullrow
+
+        sql2 = "DELETE FROM new_order " +
+               "WHERE no_w_id = ? AND no_d_id = ? AND no_o_id = ?"
+        stmt2 = @con.prepareStatement(sql2)
+        stmt2.setInt(1, @input[:w_id])
+        stmt2.setInt(2, d_id)
+        stmt2.setInt(3, no_o_id)
+        stmt2.executeUpdate
+        stmt2.close
+
+        sql3 = "SELECT o_c_id " +
+               "FROM orders " +
+               "WHERE o_id = ? AND o_d_id = ? AND " +
+               "  o_w_id = ?"
+        stmt3 = @con.prepareStatement(sql3)
+        stmt3.setInt(1, no_o_id)
+        stmt3.setInt(2, d_id)
+        stmt3.setInt(3, @input[:w_id])
+        rset = stmt3.executeQuery
+        rownum = 0
+        while rset.next
+          c_id = rset.getInt("o_c_id")
+          rownum += 1
+        end
+        rset.close
+        stmt3.close
+        raise NOT_FOUND_SQL_EXCEPTION if rownum == 0
+
+        sql4 = "UPDATE orders SET o_carrier_id = ? " +
+               "WHERE o_id = ? AND o_d_id = ? AND " +
+               "  o_w_id = ?"
+        stmt4 = @con.prepareStatement(sql4)
+        stmt4.setInt(1, @input[:o_carrier_id])
+        stmt4.setInt(2, no_o_id)
+        stmt4.setInt(3, d_id)
+        stmt4.setInt(4, @input[:w_id])
+        stmt4.executeUpdate
+        stmt4.close
+
+        sql5 = "UPDATE order_line SET ol_delivery_d = ? " +
+               "WHERE ol_o_id = ? AND ol_d_id = ? AND " +
+               "  ol_w_id = ?"
+        stmt5 = @con.prepareStatement(sql5)
+        stmt5.setTimestamp(1, datetime)
+        stmt5.setInt(2, no_o_id)
+        stmt5.setInt(3, d_id)
+        stmt5.setInt(4, @input[:w_id])
+        stmt5.executeUpdate
+        stmt5.close
+
+        sql6 = "SELECT SUM(ol_amount) " +
+               "FROM order_line " +
+               "WHERE ol_o_id = ? AND ol_d_id = ? AND " +
+               "  ol_w_id = ?"
+        stmt6 = @con.prepareStatement(sql6)
+        stmt6.setInt(1, no_o_id)
+        stmt6.setInt(2, d_id)
+        stmt6.setInt(3, @input[:w_id])
+        rset = stmt6.executeQuery
+        rownum = 0
+        nullrow = true
+        while rset.next
+          ol_total = rset.getFloat(1)
+          rownum += 1
+          nullrow = false unless rset.wasNull
+        end
+        rset.close
+        stmt6.close
+        raise NOT_FOUND_SQL_EXCEPTION if rownum == 0 || nullrow
+
+        # The row in the CUSTOMER table with matching C_W_ID (equals W_ID),
+        # C_D_ID (equals D_ID), and C_ID (equals O_C_ID) is selected and
+        # C_BALANCE is increased by the sum of all order-line amounts (OL_AMOUNT)
+        # previously retrieved. C_DELIVERY_CNT is incremented by 1.
+        sql7 = "UPDATE customer SET c_balance = c_balance + ?, " +
+               "  c_delivery_cnt = c_delivery_cnt + 1 " +
+               "WHERE c_id = ? AND c_d_id = ? AND " +
+               "  c_w_id = ?"
+        stmt7 = @con.prepareStatement(sql7)
+        stmt7.setFloat(1, ol_total)
+        stmt7.setInt(2, c_id)
+        stmt7.setInt(3, d_id)
+        stmt7.setInt(4, @input[:w_id])
+        stmt7.executeUpdate
+        stmt7.close
+
+        @con.commit
+        log.info("D: #{d_id}, O: #{no_o_id}, time: #{datetime.to_s}")
+      end
+
+      @con.commit
     end
+
+    tx.before_each do
+      @input = Hash.new
+      @input[:w_id] = home_w_id
+      @input[:o_carrier_id] = random_number(1, DIST_PER_WARE)
+    end
+
     tx.after_each { sleep(@think_time["delivery"] || 0) }
-    tx.whenever_sqlerror { @con.rollback }
+
+    tx.whenever_sqlerror do
+      @con.rollback
+      log.debug(YAML.dump(@input).chomp)
+    end
+
     return tx
   end
 
@@ -653,11 +955,14 @@ class TPCC < RTA::Session
       stmt1.setInt(1, @input[:w_id])
       stmt1.setInt(2, @input[:d_id])
       rset = stmt1.executeQuery
+      rownum = 0
       while rset.next
         o_id = rset.getInt(1)
+        rownum += 1
       end
       rset.close
       stmt1.close
+      raise NOT_FOUND_SQL_EXCEPTION if rownum == 0
 
       sql2 = "SELECT COUNT(DISTINCT (s_i_id)) FROM order_line, stock " +
              "WHERE ol_w_id = ? AND " +
@@ -681,7 +986,7 @@ class TPCC < RTA::Session
       @con.commit
     end
 
-    tx.before_all do
+    tx.before_each do
       @input = Hash.new
       @input[:w_id] = home_w_id
       @input[:d_id] = (@session_id - 1) / count_ware + 1

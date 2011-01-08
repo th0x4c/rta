@@ -109,6 +109,7 @@ module RTA
 
     private
     def add_string_to_each_line(str, msg)
+      return str if msg == ""
       return msg.map { |line| str + line }.join
     end
 

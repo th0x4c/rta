@@ -15,8 +15,6 @@ class TPCC < RTA::Session
   NOT_FOUND_ERROR_CODE = -2
   NOT_FOUND_SQL_EXCEPTION = SQLException.new.initCause(SQLException.new("Not found", nil, NOT_FOUND_ERROR_CODE))
 
-  @@mutex = Mutex.new
-  @@truncate_history = false
   @@time_str = Time.now.strftime("%Y%m%d%H%M%S")
 
   def setup

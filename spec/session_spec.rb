@@ -9,12 +9,28 @@ module RTA
 end
 
 class ExampleSession < RTA::Session
+  @@setup_first_called = 0
+  @@teardown_last_called = 0
+
+  def setup_first
+    @@setup_first_called += 1
+  end
   def setup
   end
   def transaction
     return RTA::Transaction.new
   end
   def teardown
+  end
+  def teardown_last
+    @@teardown_last_called += 1
+  end
+
+  def setup_first_called
+    return @@setup_first_called
+  end
+  def teardown_last_called
+    return @@teardown_last_called
   end
 end
 
@@ -122,6 +138,28 @@ describe RTA::Session do
       sleep 1
       @session.stop
       thread.kill if thread.alive?
+    end
+
+    it "should call #setup_first once" do
+      session1 = ExampleSession.new(1)
+      session2 = ExampleSession.new(2)
+
+      thread1 = Thread.new do
+        session1.run
+      end
+      thread2 = Thread.new do
+        session2.run
+      end
+      sleep 1
+      session1.stop
+      session2.stop
+      sleep 1
+
+      session1.setup_first_called.should == 1
+      session2.setup_first_called.should == 1
+
+      thread1.kill if thread1.alive?
+      thread2.kill if thread2.alive?
     end
   end
 end

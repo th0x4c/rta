@@ -39,6 +39,15 @@ module RTA
     GO = :go # トランザクション実行
     STOP = :stop # 処理を停止
 
+    # {Session} クラス全体で使用する +Mutex+ ロック
+    @@semaphore = Mutex.new
+
+    # すべての {Session} インスタンスの配列
+    @@sessions = Array.new
+
+    # #run メソッド実行中のインスタンス数
+    @@running = 0
+
     # セッションID
     # @return [Number]
     attr_reader :session_id
@@ -64,6 +73,9 @@ module RTA
       @session_id = sid
       @status = STANDBY
       @log = log
+      @@semaphore.synchronize do
+        @@sessions[sid - 1] = self
+      end
     end
 
     # ステータスが {STOP} になるまで処理を実行.
@@ -74,6 +86,10 @@ module RTA
     # @see #go
     # @see #stop
     def run
+      @@semaphore.synchronize do
+        @@running += 1
+        setup_first if @@running == 1
+      end
       setup
       standby_msg = false
       start_msg = false
@@ -111,6 +127,10 @@ module RTA
       @log.info("sid: #{@session_id}, msg: \"Session terminated\"")
       @log.info(summary)
       teardown
+      @@semaphore.synchronize do
+        @@running -= 1
+        teardown_last if @@running == 0
+      end
     end
 
     # ステータスを {STANDBY} 状態に変更
@@ -169,7 +189,20 @@ module RTA
       return msgs.join("\n")
     end
 
+    # すべての {Session} インスタンスの配列
+    #
+    # @return [Array<Session>] すべての {Session} インスタンスの配列
+    def sessions
+      return @@sessions
+    end
+
     private
+    # すべての {Session} インスタンス中で最初のセッション開始時に1度だけ
+    # 実行される処理.
+    # 継承したクラスで実装.
+    def setup_first
+    end
+
     # セッション開始時に1度だけ実行される処理.
     # 継承したクラスで実装.
     def setup
@@ -185,6 +218,12 @@ module RTA
     # セッション終了時に1度だけ実行される処理.
     # 継承したクラスで実装.
     def teardown
+    end
+
+    # すべての {Session} インスタンス中で最後のセッション終了時に1度だけ
+    # 実行される処理.
+    # 継承したクラスで実装.
+    def teardown_last
     end
   end
 

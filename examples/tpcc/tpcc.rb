@@ -24,25 +24,26 @@ class TPCC < RTA::Session
 
     # config.yml の例
     # ---
-    # Configuration for load and tpcc script
+    # # Configuration for load and tpcc script
     #
     # tpcc_user: tpcc
     # tpcc_password: tpcc
     # tpcc_url: jdbc:oracle:thin:@192.168.1.5:1521:XE
-    # warehouse_range: 1..10
-    # think_time: # Think time
-    #   new_order:    0.01  # New-Order
-    #   payment:      0.01  # Payment
-    #   order_status: 0.01  # Order-Status
-    #   delivery:     0.01  # Delivery
-    #   stock_level:  0.01  # Stock-Level
+    # warehouse_range: 1..3
     #
     # tx_percentage: # Percentage of each transaction
-    #   new_order:    45.0  # New-Order
-    #   payment:      43.0  # Payment
-    #   order_status:  4.0  # Order-Status
-    #   delivery:      4.0  # Delivery
-    #   stock_level:   4.0  # Stock-Level
+    #   New-Order:    45.0
+    #   Payment:      43.0
+    #   Order-Status:  4.0
+    #   Delivery:      4.0
+    #   Stock-Level:   4.0
+    #
+    # think_time: # Think time (in seconds)
+    #   New-Order:    0.01
+    #   Payment:      0.01
+    #   Order-Status: 0.01
+    #   Delivery:     0.01
+    #   Stock-Level:  0.01
     config = Hash.new
     File.open(TPCC_HOME + '/config/config.yml', 'r') do |file|
       config = YAML.load(file.read)
@@ -74,11 +75,11 @@ class TPCC < RTA::Session
 
     # Transaction
     @tx = Hash.new
-    @tx["new_order"] = neword   # New-Order Transaction  
-    @tx["payment"] = payment    # Payment Transaction    
-    @tx["order_status"] = ostat # Order-Status Transaction
-    @tx["delivery"] = delivery  # Delivery Transaction   
-    @tx["stock_level"] = slev   # Stock-Level Transaction
+    @tx["New-Order"] = neword   # New-Order Transaction  
+    @tx["Payment"] = payment    # Payment Transaction    
+    @tx["Order-Status"] = ostat # Order-Status Transaction
+    @tx["Delivery"] = delivery  # Delivery Transaction   
+    @tx["Stock-Level"] = slev   # Stock-Level Transaction
   end
 
   def transaction
@@ -1060,7 +1061,7 @@ class TPCC < RTA::Session
     log.info("Keying/Think Times (in seconds),")
     log.info("                         Min.          Average           Max.")
     tx_stats.each do |tx_st|
-      key = @think_time.keys.find { |ky| ky == tx_st.name.downcase.gsub("-", "_") }
+      key = @think_time.keys.find { |ky| ky == tx_st.name }
       think_time = @think_time[key]
       log.info(sprintf("  - %-14s %7.3f/%7.3f %7.3f/%7.3f %7.3f/%7.3f",
                        tx_st.name, 0.0, think_time, 0.0, think_time, 0.0, think_time))

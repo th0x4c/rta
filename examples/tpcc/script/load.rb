@@ -11,7 +11,6 @@ class TPCCLoad < RTA::Session
   INSERTS_PER_COMMIT = 100
 
   @@mutex = Mutex.new
-  @@count_ware = 0
   @@timestamp = java.sql.Date.new(Time.now.to_f * 1000)
   @@count_load = 0
   @@permutation = Array.new
@@ -36,12 +35,9 @@ class TPCCLoad < RTA::Session
     warehouse_range = eval(config["warehouse_range"])
     @first_warehouse_id = warehouse_range.first
     @last_warehouse_id =  warehouse_range.last
-    @@mutex.synchronize do
-      @@count_ware = @last_warehouse_id - @first_warehouse_id + 1
-      if @@count_ware <= 0 || @first_warehouse_id <= 0 || @last_warehouse_id <= 0
-        log.error("Invalid Warehouse Count.")
-        exit(-1)
-      end
+    if count_ware <= 0 || @first_warehouse_id <= 0 || @last_warehouse_id <= 0
+      log.error("Invalid Warehouse Count.")
+      exit(-1)
     end
 
     log.info("TPCC Data Load Started...")
@@ -69,11 +65,11 @@ class TPCCLoad < RTA::Session
   def transaction
     tx = nil
     item_ld = MAXITEMS
-    ware_ld = item_ld + @@count_ware
-    stock_ld = ware_ld + (@@count_ware * MAXITEMS)
-    district_ld = stock_ld + (@@count_ware * DIST_PER_WARE)
-    cust_ld = district_ld + (@@count_ware * DIST_PER_WARE * CUST_PER_DIST)
-    ord_ld = cust_ld + (@@count_ware * DIST_PER_WARE * ORD_PER_DIST)
+    ware_ld = item_ld + count_ware
+    stock_ld = ware_ld + (count_ware * MAXITEMS)
+    district_ld = stock_ld + (count_ware * DIST_PER_WARE)
+    cust_ld = district_ld + (count_ware * DIST_PER_WARE * CUST_PER_DIST)
+    ord_ld = cust_ld + (count_ware * DIST_PER_WARE * ORD_PER_DIST)
 
     @@mutex.synchronize do
       @@count_load += 1
@@ -195,7 +191,7 @@ class TPCCLoad < RTA::Session
 
       @load_ware.after_each do
         @con.commit if self.stat.count % INSERTS_PER_COMMIT == 0
-        @con.commit if @loading == @@count_ware
+        @con.commit if @loading == count_ware
       end
 
       @load_ware.whenever_sqlerror { @con.rollback }
@@ -256,7 +252,7 @@ class TPCCLoad < RTA::Session
       @load_stock.after_each do
         @con.commit if self.stat.count % INSERTS_PER_COMMIT == 0
 
-        if @loading == @@count_ware * MAXITEMS
+        if @loading == count_ware * MAXITEMS
           @con.commit
           log.info("Stock Done.")
         end
@@ -304,7 +300,7 @@ class TPCCLoad < RTA::Session
 
       @load_district.after_each do
         @con.commit if self.stat.count % INSERTS_PER_COMMIT == 0
-        @con.commit if @loading == @@count_ware * DIST_PER_WARE
+        @con.commit if @loading == count_ware * DIST_PER_WARE
       end
 
       @load_district.whenever_sqlerror { @con.rollback }
@@ -400,7 +396,7 @@ class TPCCLoad < RTA::Session
       @load_cust.after_each do
         @con.commit if self.stat.count % INSERTS_PER_COMMIT == 0
 
-        if @loading == @@count_ware * DIST_PER_WARE * CUST_PER_DIST
+        if @loading == count_ware * DIST_PER_WARE * CUST_PER_DIST
           @con.commit
           log.info("Customer Done.")
         end
@@ -528,7 +524,7 @@ class TPCCLoad < RTA::Session
       @load_ord.after_each do
         @con.commit if self.stat.count % INSERTS_PER_COMMIT == 0
 
-        if @loading == @@count_ware * DIST_PER_WARE * ORD_PER_DIST
+        if @loading == count_ware * DIST_PER_WARE * ORD_PER_DIST
           @con.commit
           log.info("Orders Done.")
         end
@@ -589,5 +585,9 @@ class TPCCLoad < RTA::Session
     end
     raise "permutation is nil" if ret.nil?
     return ret
+  end
+
+  def count_ware
+    return @last_warehouse_id - @first_warehouse_id + 1
   end
 end

@@ -38,12 +38,19 @@ class TPCC < RTA::Session
     #   Delivery:      4.0
     #   Stock-Level:   4.0
     #
+    # keying_time: # Keying Time (in seconds)
+    #   New-Order:    18.00
+    #   Payment:       3.00
+    #   Order-Status:  2.00
+    #   Delivery:      2.00  
+    #   Stock-Level:   2.00
+    #
     # think_time: # Think time (in seconds)
-    #   New-Order:    0.01
-    #   Payment:      0.01
-    #   Order-Status: 0.01
-    #   Delivery:     0.01
-    #   Stock-Level:  0.01
+    #   New-Order:    12.00
+    #   Payment:      12.00
+    #   Order-Status: 10.00
+    #   Delivery:      5.00
+    #   Stock-Level:   5.00
     config = Hash.new
     File.open(TPCC_HOME + '/config/config.yml', 'r') do |file|
       config = YAML.load(file.read)
@@ -55,11 +62,23 @@ class TPCC < RTA::Session
       log.error("Invalid Warehouse Count.")
       exit(-1)
     end
-    @think_time = config["think_time"]
     @tx_percentage = config["tx_percentage"]
     # @tx_percentage を % に変換(合計が 100 となるようにする)
     sum = @tx_percentage.values.inject(0) { |sum, pct| sum + pct }
     @tx_percentage.each { |key, value| @tx_percentage[key] = (value / sum.to_f) * 100 }
+    @keying_time = config["keying_time"]
+    @think_time = config["think_time"]    
+
+    @min_think_time = {"New-Order" => 0, "Payment" => 0, "Order-Status" => 0,
+                       "Delivery" => 0, "Stock-Level" => 0}
+    @max_think_time = {"New-Order" => nil, "Payment" => nil, "Order-Status" => nil,
+                       "Delivery" => nil, "Stock-Level" => nil}
+    @count_think_time =  {"New-Order" => 0, "Payment" => 0, "Order-Status" => 0,
+                          "Delivery" => 0, "Stock-Level" => 0}
+    @total_think_time =  {"New-Order" => 0, "Payment" => 0, "Order-Status" => 0,
+                          "Delivery" => 0, "Stock-Level" => 0}
+    @think_time_stat = {:min => @min_think_time, :max => @max_think_time,
+                        :count => @count_think_time, :total => @total_think_time}
 
     # 接続
     begin
@@ -352,9 +371,11 @@ class TPCC < RTA::Session
       @input[:supware] = supware
       @input[:itemid] = itemid
       @input[:qty] = qty
+
+      sleep(keying_time("New-Order"))
     end
 
-    tx.after_each { sleep(@think_time["new_order"] || 0) }
+    tx.after_each { sleep_think_time("New-Order") }
 
     tx.whenever_sqlerror do |ex|
       @con.rollback
@@ -641,9 +662,11 @@ class TPCC < RTA::Session
       @input[:c_id] = c_id
       @input[:byname] = byname
       @input[:h_amount] = h_amount
+
+      sleep(keying_time("Payment"))
     end
 
-    tx.after_each { sleep(@think_time["payment"] || 0) }
+    tx.after_each { sleep_think_time("Payment") }
 
     tx.whenever_sqlerror do
       @con.rollback
@@ -791,9 +814,11 @@ class TPCC < RTA::Session
       @input[:c_last] = c_last
       @input[:c_id] = c_id
       @input[:byname] = byname
+
+      sleep(keying_time("Order-Status"))
     end
 
-    tx.after_each { sleep(@think_time["order_status"] || 0) }
+    tx.after_each { sleep_think_time("Order-Status") }
 
     tx.whenever_sqlerror do
       @con.rollback
@@ -938,9 +963,11 @@ class TPCC < RTA::Session
       @input = Hash.new
       @input[:w_id] = home_w_id
       @input[:o_carrier_id] = random_number(1, DIST_PER_WARE)
+
+      sleep(keying_time("Delivery"))
     end
 
-    tx.after_each { sleep(@think_time["delivery"] || 0) }
+    tx.after_each { sleep_think_time("Delivery") }
 
     tx.whenever_sqlerror do
       @con.rollback
@@ -995,9 +1022,11 @@ class TPCC < RTA::Session
       @input[:w_id] = home_w_id
       @input[:d_id] = (@session_id - 1) / count_ware + 1
       @input[:threshold] = random_number(10, 20)
+
+      sleep(keying_time("Stock-Level"))
     end
 
-    tx.after_each { sleep(@think_time["stock_level"] || 0) }
+    tx.after_each { sleep_think_time("Stock-Level") }
 
     tx.whenever_sqlerror do
       @con.rollback
@@ -1047,24 +1076,31 @@ class TPCC < RTA::Session
     log.info("Response Times (minimum/ Average/ maximum) in seconds")
     tx_stats.each do |tx_st|
       log.info(sprintf("  - %-34s %7.3f / %7.3f / %7.3f",
-                       tx_st.name, tx_st.min_elapsed_time, tx_st.avg_elapsed_time, tx_st.max_elapsed_time))
+                       tx_st.name, (tx_st.min_elapsed_time || 0), tx_st.avg_elapsed_time, (tx_st.max_elapsed_time || 0)))
     end
     log.info("")
 
     log.info("Transaction Mix, in percent of total transactions")
     tx_stats.each do |tx_st|
-      log.info(sprintf("  - %-54s %5.2f %",
-                       tx_st.name, tx_st.count * 100 / all_stat.count.to_f))
+      percent = all_stat.count == 0 ? 0 : tx_st.count * 100 / all_stat.count.to_f
+      log.info(sprintf("  - %-54s %5.2f %", tx_st.name, percent))
     end
     log.info("")
 
     log.info("Keying/Think Times (in seconds),")
     log.info("                         Min.          Average           Max.")
     tx_stats.each do |tx_st|
-      key = @think_time.keys.find { |ky| ky == tx_st.name }
-      think_time = @think_time[key]
+      keying_time = @keying_time[tx_st.name]
+      min_tt = sessions.map { |ses| ses.think_time_stat[:min][tx_st.name] }.min
+      max_tt = sessions.map { |ses| ses.think_time_stat[:max][tx_st.name] || 0 }.max
+      count_tt = sessions.map { |ses| ses.think_time_stat[:count][tx_st.name] }.
+                   inject { |count, item| count += item }
+      total_tt = sessions.map { |ses| ses.think_time_stat[:total][tx_st.name] }.
+                   inject { |total, item| total += item }
+      avg_tt = count_tt == 0 ? 0 : total_tt / count_tt
       log.info(sprintf("  - %-14s %7.3f/%7.3f %7.3f/%7.3f %7.3f/%7.3f",
-                       tx_st.name, 0.0, think_time, 0.0, think_time, 0.0, think_time))
+                       tx_st.name, keying_time, min_tt, keying_time, avg_tt,
+                       keying_time, max_tt))
     end
     log.info("")
 
@@ -1085,5 +1121,32 @@ class TPCC < RTA::Session
     end
     stat.name = name
     return stat
+  end
+
+  def keying_time(tx_name)
+    return @keying_time[tx_name]
+  end
+
+  def think_time(tx_name)
+    return (- Math.log(rand) * @think_time[tx_name])
+  end
+
+  def sleep_think_time(tx_name)
+    tt = think_time(tx_name)
+    sleep tt
+    @count_think_time[tx_name] += 1
+    @total_think_time[tx_name] += tt
+    if @count_think_time[tx_name] == 1
+      @max_think_time[tx_name] = tt
+    else
+      @max_think_time[tx_name] =
+        tt > @max_think_time[tx_name] ? tt : @max_think_time[tx_name]
+      @min_think_time[tx_name] =
+        tt < @min_think_time[tx_name] ? tt : @min_think_time[tx_name]
+    end
+  end
+
+  def think_time_stat
+    return @think_time_stat
   end
 end

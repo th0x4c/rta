@@ -99,6 +99,10 @@ class TPCC < RTA::Session
     @con.close
   end
 
+  def teardown_last
+    disclosure_report
+  end
+
   def transactions
     return @tx.values
   end
@@ -1007,5 +1011,77 @@ class TPCC < RTA::Session
 
   def count_ware
     return @last_w_id - @first_w_id + 1
+  end
+
+  def disclosure_report
+    new_order_stat = get_stat_by_name("New-Order")
+    payment_stat = get_stat_by_name("Payment")
+    order_status_stat = get_stat_by_name("Order-Status")
+    delivery_stat = get_stat_by_name("Delivery")
+    stock_level_stat = get_stat_by_name("Stock-Level")
+
+    tx_stats = [new_order_stat, payment_stat, order_status_stat,
+                delivery_stat, stock_level_stat]
+    all_stat = sessions.map { |ses| ses.stat }.inject { |result, st| result += st }
+
+    first_time = all_stat.first_time
+    end_time = all_stat.end_time
+
+    return if first_time.nil? || end_time.nil?
+    if end_time - first_time > 0
+      tpmc = new_order_stat.count * 60 / (end_time - first_time)
+    else
+      tpmc = 0
+    end
+
+    log.info("==================================================================")
+    log.info("================== Numerical Quantities Summary ==================")
+    log.info("==================================================================")
+
+    log.info(sprintf("MQTh, computed Maximum Qualified Throughput %17.2f tpmC", tpmc))
+    log.info("")
+
+    # log.info("Response Times (90th percentile/ Average/ maximum) in seconds")
+    log.info("Response Times (minimum/ Average/ maximum) in seconds")
+    tx_stats.each do |tx_st|
+      log.info(sprintf("  - %-34s %7.3f / %7.3f / %7.3f",
+                       tx_st.name, tx_st.min_elapsed_time, tx_st.avg_elapsed_time, tx_st.max_elapsed_time))
+    end
+    log.info("")
+
+    log.info("Transaction Mix, in percent of total transactions")
+    tx_stats.each do |tx_st|
+      log.info(sprintf("  - %-54s %5.2f %",
+                       tx_st.name, tx_st.count * 100 / all_stat.count.to_f))
+    end
+    log.info("")
+
+    log.info("Keying/Think Times (in seconds),")
+    log.info("                         Min.          Average           Max.")
+    tx_stats.each do |tx_st|
+      key = @think_time.keys.find { |ky| ky == tx_st.name.downcase.gsub("-", "_") }
+      think_time = @think_time[key]
+      log.info(sprintf("  - %-14s %7.3f/%7.3f %7.3f/%7.3f %7.3f/%7.3f",
+                       tx_st.name, 0.0, think_time, 0.0, think_time, 0.0, think_time))
+    end
+    log.info("")
+
+    log.info("Test Duration")
+    log.info(sprintf("  - Ramp-up time %41.3f seconds", 0.0))
+    log.info(sprintf("  - Measurement interval %33.3f seconds", end_time - first_time))
+    log.info("  - Number of transactions (all types)")
+    log.info(sprintf("    completed in measurement interval %28d", all_stat.count))
+
+    log.info("==================================================================")
+  end
+
+  def get_stat_by_name(name)
+    stat = RTA::TransactionStatistic.new
+    payment_stat = sessions.each do |ses|
+      stat ||= RTA::TransactionStatistic.new
+      stat += ses.transactions.find { |tx| tx.name == name }.stat
+    end
+    stat.name = name
+    return stat
   end
 end

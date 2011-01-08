@@ -35,7 +35,7 @@ describe "TPC-C Consistency Requirements" do
       stmt1.setInt(1, w_id)
       rset = stmt1.executeQuery
       while rset.next
-        w_ytd = rset.getFloat(1)
+        w_ytd = rset.getDouble(1)
       end
       rset.close
       stmt1.close
@@ -45,7 +45,7 @@ describe "TPC-C Consistency Requirements" do
       stmt2.setInt(1, w_id)
       rset = stmt2.executeQuery
       while rset.next
-        sum_d_ytd = rset.getFloat(1)
+        sum_d_ytd = rset.getDouble(1)
       end
       rset.close
       stmt2.close
@@ -282,7 +282,7 @@ describe "TPC-C Consistency Requirements" do
       stmt1.setInt(1, w_id)
       rset = stmt1.executeQuery
       while rset.next
-        w_ytd = rset.getFloat(1)
+        w_ytd = rset.getDouble(1)
       end
       rset.close
       stmt1.close
@@ -292,7 +292,7 @@ describe "TPC-C Consistency Requirements" do
       stmt2.setInt(1, w_id)
       rset = stmt2.executeQuery
       while rset.next
-        sum_h_amount = rset.getFloat(1)
+        sum_h_amount = rset.getDouble(1)
       end
       rset.close
       stmt2.close
@@ -311,7 +311,7 @@ describe "TPC-C Consistency Requirements" do
         stmt1.setInt(2, d_id)
         rset = stmt1.executeQuery
         while rset.next
-          d_ytd = rset.getFloat(1)
+          d_ytd = rset.getDouble(1)
         end
         rset.close
         stmt1.close
@@ -323,7 +323,7 @@ describe "TPC-C Consistency Requirements" do
         stmt2.setInt(2, d_id)
         rset = stmt2.executeQuery
         while rset.next
-          sum_h_amount = rset.getFloat(1)
+          sum_h_amount = rset.getDouble(1)
         end
         rset.close
         stmt2.close
@@ -341,7 +341,7 @@ describe "TPC-C Consistency Requirements" do
       c_w_id = rset1.getInt("c_w_id")
       c_d_id = rset1.getInt("c_d_id")
       c_id = rset1.getInt("c_id")
-      c_balance = rset1.getFloat("c_balance")
+      c_balance = rset1.getDouble("c_balance")
 
       sql2 = "SELECT SUM(ol_amount) FROM order_line, orders " +
              "WHERE ol_w_id = o_w_id AND ol_d_id = o_d_id AND ol_o_id = o_id AND " +
@@ -353,7 +353,7 @@ describe "TPC-C Consistency Requirements" do
       stmt2.setInt(3, c_id)
       rset2 = stmt2.executeQuery
       while rset2.next
-        sum_ol_amount = rset2.getFloat(1)
+        sum_ol_amount = rset2.getDouble(1)
       end
       rset2.close
       stmt2.close
@@ -366,7 +366,7 @@ describe "TPC-C Consistency Requirements" do
       stmt3.setInt(3, c_id)
       rset3 = stmt3.executeQuery
       while rset3.next
-        sum_h_amount = rset3.getFloat(1)
+        sum_h_amount = rset3.getDouble(1)
       end
       rset3.close
       stmt3.close
@@ -422,8 +422,8 @@ describe "TPC-C Consistency Requirements" do
         stmt1.setInt(3, c_id)
         rset = stmt1.executeQuery
         while rset.next
-          c_balance = rset.getFloat("c_balance")
-          c_ytd_payment = rset.getFloat("c_ytd_payment")
+          c_balance = rset.getDouble("c_balance")
+          c_ytd_payment = rset.getDouble("c_ytd_payment")
         end
         rset.close
         stmt1.close
@@ -438,7 +438,7 @@ describe "TPC-C Consistency Requirements" do
         stmt2.setInt(3, c_id)
         rset = stmt2.executeQuery
         while rset.next
-          sum_ol_amount = rset.getFloat(1)
+          sum_ol_amount = rset.getDouble(1)
         end
         rset.close
         stmt2.close

@@ -143,10 +143,10 @@ class TPCC < RTA::Session
       rset = stmt1.executeQuery
       rownum = 0
       while rset.next
-        c_discount = rset.getFloat("c_discount")
+        c_discount = rset.getDouble("c_discount")
         c_last = rset.getString("c_last")
         c_credit = rset.getString("c_credit")
-        w_tax = rset.getFloat("w_tax")
+        w_tax = rset.getDouble("w_tax")
         rownum += 1
       end
       rset.close
@@ -164,7 +164,7 @@ class TPCC < RTA::Session
       rownum = 0
       while rset.next
         d_next_o_id = rset.getInt("d_next_o_id")
-        d_tax = rset.getFloat("d_tax")
+        d_tax = rset.getDouble("d_tax")
         rownum += 1
       end
       rset.close
@@ -224,7 +224,7 @@ class TPCC < RTA::Session
         rset = stmt6.executeQuery
         rownum = 0
         while rset.next
-          price[ol_number] = rset.getFloat("i_price")
+          price[ol_number] = rset.getDouble("i_price")
           iname[ol_number] = rset.getString("i_name")
           i_data = rset.getString("i_data")
           rownum += 1
@@ -318,7 +318,7 @@ class TPCC < RTA::Session
         stmt9.setInt(5, ol_i_id)
         stmt9.setInt(6, ol_supply_w_id)
         stmt9.setInt(7, ol_quantity)
-        stmt9.setFloat(8, ol_amount)
+        stmt9.setDouble(8, ol_amount)
         stmt9.setString(9, ol_dist_info)
         stmt9.executeUpdate
         stmt9.close
@@ -394,7 +394,7 @@ class TPCC < RTA::Session
       sql1 = "UPDATE warehouse SET w_ytd = w_ytd + ? " +
              "WHERE w_id = ?"
       stmt1 = @con.prepareStatement(sql1)
-      stmt1.setFloat(1, @input[:h_amount])
+      stmt1.setDouble(1, @input[:h_amount])
       stmt1.setInt(2, @input[:w_id])
       stmt1.executeUpdate
       stmt1.close
@@ -422,7 +422,7 @@ class TPCC < RTA::Session
       sql3 = "UPDATE district SET d_ytd = d_ytd + ? " +
              "WHERE d_w_id = ? AND d_id = ?"
       stmt3 = @con.prepareStatement(sql3)
-      stmt3.setFloat(1, @input[:h_amount])
+      stmt3.setDouble(1, @input[:h_amount])
       stmt3.setInt(2, @input[:w_id])
       stmt3.setInt(3, @input[:d_id])
       stmt3.executeUpdate
@@ -492,9 +492,9 @@ class TPCC < RTA::Session
           c_zip = c_byname.getString("c_zip")
           c_phone = c_byname.getString("c_phone")
           c_credit = c_byname.getString("c_credit")
-          c_credit_lim = c_byname.getFloat("c_credit_lim")
-          c_discount = c_byname.getFloat("c_discount")
-          c_balance = c_byname.getFloat("c_balance")
+          c_credit_lim = c_byname.getDouble("c_credit_lim")
+          c_discount = c_byname.getDouble("c_discount")
+          c_balance = c_byname.getDouble("c_balance")
           c_since = c_byname.getTimestamp("c_since")
         end
         c_byname.close
@@ -523,9 +523,9 @@ class TPCC < RTA::Session
           c_zip = rset.getString("c_zip")
           c_phone = rset.getString("c_phone")
           c_credit = rset.getString("c_credit")
-          c_credit_lim = rset.getFloat("c_credit_lim")
-          c_discount = rset.getFloat("c_discount")
-          c_balance = rset.getFloat("c_balance")
+          c_credit_lim = rset.getDouble("c_credit_lim")
+          c_discount = rset.getDouble("c_discount")
+          c_balance = rset.getDouble("c_balance")
           c_since = rset.getTimestamp("c_since")
           rownum += 1
         end
@@ -574,9 +574,9 @@ class TPCC < RTA::Session
                "WHERE c_w_id = ? AND c_d_id = ? AND " +
                "  c_id = ?"
         stmt9 = @con.prepareStatement(sql9)
-        stmt9.setFloat(1, @input[:h_amount])
+        stmt9.setDouble(1, @input[:h_amount])
         stmt9.setString(2, c_new_data)
-        stmt9.setFloat(3, @input[:h_amount])
+        stmt9.setDouble(3, @input[:h_amount])
         stmt9.setInt(4, @input[:c_w_id])
         stmt9.setInt(5, @input[:c_d_id])
         stmt9.setInt(6, c_id)
@@ -591,8 +591,8 @@ class TPCC < RTA::Session
                 "WHERE c_w_id = ? AND c_d_id = ? AND " +
                 "  c_id = ?"
         stmt10 = @con.prepareStatement(sql10)
-        stmt10.setFloat(1, @input[:h_amount])
-        stmt10.setFloat(2, @input[:h_amount])
+        stmt10.setDouble(1, @input[:h_amount])
+        stmt10.setDouble(2, @input[:h_amount])
         stmt10.setInt(3, @input[:c_w_id])
         stmt10.setInt(4, @input[:c_d_id])
         stmt10.setInt(5, c_id)
@@ -614,7 +614,7 @@ class TPCC < RTA::Session
       stmt11.setInt(4, @input[:d_id])
       stmt11.setInt(5, @input[:w_id])
       stmt11.setTimestamp(6, datetime)
-      stmt11.setFloat(7, @input[:h_amount])
+      stmt11.setDouble(7, @input[:h_amount])
       stmt11.setString(8, h_data)
       stmt11.executeUpdate
       stmt11.close
@@ -709,7 +709,7 @@ class TPCC < RTA::Session
         namecnt += 1 if namecnt % 2 == 1
         (namecnt / 2).times do |n|
           c_name.next
-          c_balance = c_name.getFloat("c_balance")
+          c_balance = c_name.getDouble("c_balance")
           c_first = c_name.getString("c_first")
           c_middle = c_name.getString("c_middle")
           c_id = c_name.getInt("c_id")
@@ -727,7 +727,7 @@ class TPCC < RTA::Session
         rset = stmt3.executeQuery
         rownum = 0
         while rset.next
-          c_balance = rset.getFloat("c_balance")
+          c_balance = rset.getDouble("c_balance")
           c_first = rset.getString("c_first")
           c_middle = rset.getString("c_middle")
           c_last = rset.getString("c_last")
@@ -784,7 +784,7 @@ class TPCC < RTA::Session
         ol_i_id << c_line.getInt("ol_i_id")
         ol_supply_w_id << c_line.getInt("ol_supply_w_id")
         ol_quantity << c_line.getInt("ol_quantity") 
-        ol_amount << c_line.getFloat("ol_amount") 
+        ol_amount << c_line.getDouble("ol_amount") 
         ol_delivery_d << c_line.getTimestamp("ol_delivery_d")
       end
       c_line.close
@@ -928,7 +928,7 @@ class TPCC < RTA::Session
         rownum = 0
         nullrow = true
         while rset.next
-          ol_total = rset.getFloat(1)
+          ol_total = rset.getDouble(1)
           rownum += 1
           nullrow = false unless rset.wasNull
         end
@@ -945,7 +945,7 @@ class TPCC < RTA::Session
                "WHERE c_id = ? AND c_d_id = ? AND " +
                "  c_w_id = ?"
         stmt7 = @con.prepareStatement(sql7)
-        stmt7.setFloat(1, ol_total)
+        stmt7.setDouble(1, ol_total)
         stmt7.setInt(2, c_id)
         stmt7.setInt(3, d_id)
         stmt7.setInt(4, @input[:w_id])

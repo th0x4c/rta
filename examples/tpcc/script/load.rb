@@ -144,7 +144,7 @@ class TPCCLoad < RTA::Session
         stmt.setInt(1, i_id)
         stmt.setInt(2, i_im_id)
         stmt.setString(3, i_name)
-        stmt.setFloat(4, i_price)
+        stmt.setDouble(4, i_price)
         stmt.setString(5, i_data)
         stmt.executeUpdate
         stmt.close
@@ -188,8 +188,8 @@ class TPCCLoad < RTA::Session
         stmt.setString(5, w_city)
         stmt.setString(6, w_state)
         stmt.setString(7, w_zip)
-        stmt.setFloat(8, w_tax)
-        stmt.setFloat(9, w_ytd)
+        stmt.setDouble(8, w_tax)
+        stmt.setDouble(9, w_ytd)
         stmt.executeUpdate
         stmt.close
       end
@@ -296,8 +296,8 @@ class TPCCLoad < RTA::Session
         stmt.setString(6, d_city)
         stmt.setString(7, d_state)
         stmt.setString(8, d_zip)
-        stmt.setFloat(9, d_tax)
-        stmt.setFloat(10, d_ytd)
+        stmt.setDouble(9, d_tax)
+        stmt.setDouble(10, d_ytd)
         stmt.setInt(11, d_next_o_id)
         stmt.executeUpdate
         stmt.close
@@ -369,9 +369,9 @@ class TPCCLoad < RTA::Session
         stmt.setString(12, c_phone)
         stmt.setDate(13, @@timestamp)
         stmt.setString(14, c_credit)
-        stmt.setFloat(15, c_credit_lim)
-        stmt.setFloat(16, c_discount)
-        stmt.setFloat(17, c_balance)
+        stmt.setDouble(15, c_credit_lim)
+        stmt.setDouble(16, c_discount)
+        stmt.setDouble(17, c_balance)
         stmt.setString(18, c_data)
         stmt.executeUpdate
         stmt.close
@@ -390,7 +390,7 @@ class TPCCLoad < RTA::Session
         stmt.setInt(4, c_w_id)
         stmt.setInt(5, c_d_id)
         stmt.setDate(6, @@timestamp)
-        stmt.setFloat(7, h_amount)
+        stmt.setDouble(7, h_amount)
         stmt.setString(8, h_data)
         stmt.executeUpdate
         stmt.close
@@ -491,7 +491,7 @@ class TPCCLoad < RTA::Session
             stmt.setInt(5, ol_i_id)
             stmt.setInt(6, ol_supply_w_id)
             stmt.setInt(7, ol_quantity)
-            stmt.setFloat(8, ol_amount)
+            stmt.setDouble(8, ol_amount)
             stmt.setString(9, ol_dist_info)
             stmt.executeUpdate
             stmt.close
@@ -515,7 +515,7 @@ class TPCCLoad < RTA::Session
             stmt.setInt(5, ol_i_id)
             stmt.setInt(6, ol_supply_w_id)
             stmt.setInt(7, ol_quantity)
-            stmt.setFloat(8, ol_amount)
+            stmt.setDouble(8, ol_amount)
             stmt.setString(9, ol_dist_info)
             stmt.setDate(10, @@timestamp)
             stmt.executeUpdate

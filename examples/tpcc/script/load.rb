@@ -15,6 +15,10 @@ class TPCCLoad < RTA::Session
   @@count_load = 0
   @@permutation = Array.new
 
+  def setup_first
+    log.info("TPCC Data Load Started...")
+  end
+
   def setup
     # ログ
     # self.log = RTA::Log.new(TPCC_HOME + "/log/load_#{@session_id}.log")
@@ -39,8 +43,6 @@ class TPCCLoad < RTA::Session
       log.error("Invalid Warehouse Count.")
       exit(-1)
     end
-
-    log.info("TPCC Data Load Started...")
 
     # 接続
     begin
@@ -117,6 +119,9 @@ class TPCCLoad < RTA::Session
   def teardown
     @con.commit
     @con.close
+  end
+
+  def teardown_last
     log.info("...DATA LOADING COMPLETED SUCCESSFULLY.")
   end
 

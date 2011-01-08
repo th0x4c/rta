@@ -159,6 +159,10 @@ module RTA
     # 
     # @return [TransactionStatistic]
     def +(stat)
+      unless stat.class == TransactionStatistic
+        raise "Arg is not RAT::TransactionStatistic instance"
+      end
+
       if stat.first_time.nil?
         ret = self.dup
         ret.name = @name + stat.name

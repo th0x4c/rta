@@ -136,6 +136,7 @@ class TPCC < RTA::Session
       sql2 = "SELECT d_next_o_id, d_tax " +
              "FROM district "+
              "WHERE d_id = ? AND d_w_id = ?"
+      sql2 += " FOR UPDATE" # avoid unique constraint (TPCC.ORDERS_PK) violation
       stmt2 = @con.prepareStatement(sql2)
       stmt2.setInt(1, @input[:d_id])
       stmt2.setInt(2, @input[:w_id])

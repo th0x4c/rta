@@ -1,6 +1,6 @@
 # RTA -- Ruby Transaction Application Tool
 module RTA
-  VERSION = '0.3.6'   # Version
+  VERSION = '0.3.7'   # Version
   ROOT = File.expand_path(File.dirname(__FILE__)) # full path for lib directory
 end
 

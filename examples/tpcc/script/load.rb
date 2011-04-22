@@ -10,7 +10,7 @@ class TPCCLoad < RTA::Session
 
   INSERTS_PER_COMMIT = 100
 
-  @@mutex = Mutex.new
+  @@mutexes = [Mutex.new, Mutex.new]
   @@timestamp = java.sql.Date.new(Time.now.to_f * 1000)
   @@count_load = 0
   @@permutation = Array.new
@@ -73,7 +73,7 @@ class TPCCLoad < RTA::Session
     cust_ld = district_ld + (count_ware * DIST_PER_WARE * CUST_PER_DIST)
     ord_ld = cust_ld + (count_ware * DIST_PER_WARE * ORD_PER_DIST)
 
-    @@mutex.synchronize do
+    @@mutexes[0].synchronize do
       @@count_load += 1
       if @@count_load <= item_ld # Loads the Item table
         @loading = @@count_load
@@ -585,7 +585,7 @@ class TPCCLoad < RTA::Session
 
   def get_permutation
     ret = nil
-    @@mutex.synchronize do
+    @@mutexes[1].synchronize do
       ret = @@permutation.shift
     end
     raise "permutation is nil" if ret.nil?

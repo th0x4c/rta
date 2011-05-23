@@ -6,7 +6,7 @@ SPEC = Gem::Specification.new do |s|
     It enables the user to generate transaction processing application that is
     written in JRuby and JDBC.
   EOF
-  s.version       = "0.3.7"
+  s.version       = "0.3.8"
   s.author        = "Takashi Hashizume"
   s.email         = "th0x4c@gmail.com"
   s.files         = Dir.glob("{bin,lib,spec,examples}/**/*") + ['README', 'Rakefile']
@@ -14,6 +14,5 @@ SPEC = Gem::Specification.new do |s|
   s.executables   = ['rtactl']
   s.has_rdoc      = true
   s.extra_rdoc_files = ["README"]
-  # s.homepage      = "http://rta.rubyforge.org"
-  # s.rubyforge_project = 'rta'
+  s.homepage      = "https://github.com/th0x4c/rta"
 end

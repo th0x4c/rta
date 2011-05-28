@@ -20,7 +20,7 @@ rtactl [options] <command> [<file>]
    Specify number of sessions.
 
 -s | --sid ::
-   Specify session IDs (CSV).
+   Specify session IDs (comma-delimited list).
 
 -h ::
    Output help

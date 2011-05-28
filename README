@@ -34,7 +34,7 @@ rtactl [options] <command> [<file>]
 * Change status of session 3 and 4 to standby
     rtactl -p 9000 -s 3,4 standby
 * Launch command line interface to interact RTA
-    rtactl -p 9000 cli
+    rtactl -p 9000 console
 * Stop RTA
     rtactl -p 9000 stop
 

@@ -9,9 +9,9 @@ fi
 JRUBY_CMD=`which jruby 2>&1 | grep -v "no jruby"`
 if [ "$JRUBY_CMD" = "" ]
 then
-  JRUBY_COMPLETE="$RTA_HOME/lib/jruby/jruby-complete-1.5.5.jar"
+  JRUBY_COMPLETE="$RTA_HOME/lib/jruby/jruby-complete-1.6.3.jar"
   JAVA_MEM=-Xmx500m
-  JAVA_STACK=-Xss1024k
+  JAVA_STACK=-Xss2048k
   JAVA_VM=-client
   JAVA_OPTS="$JAVA_VM $JAVA_MEM $JAVA_STACK"
   JRUBY_CMD="java $JAVA_OPTS -classpath $JRUBY_COMPLETE:$CLASSPATH org.jruby.Main"

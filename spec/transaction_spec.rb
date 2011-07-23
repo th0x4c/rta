@@ -69,13 +69,13 @@ describe RTA::Transaction do
 
   describe "#first_time" do
     it "should be the first timestamp" do
-      @tx.first_time.should be_close(@first_time, 0.002)
+      @tx.first_time.should be_within(0.002).of(@first_time)
     end
   end
 
   describe "#start_time" do
     it "should be the last start timestamp" do
-      @tx.start_time.should be_close(@start_time, 0.002)
+      @tx.start_time.should be_within(0.002).of(@start_time)
     end
 
     it "should be nil if the transaction is not executed" do
@@ -85,7 +85,7 @@ describe RTA::Transaction do
 
   describe "#end_time" do
     it "should be the last end timestamp" do
-      @tx.end_time.should be_close(@end_time, 0.002)
+      @tx.end_time.should be_within(0.002).of(@end_time)
     end
 
     it "should be nil if the transaction is not executed" do
@@ -95,7 +95,7 @@ describe RTA::Transaction do
 
   describe "#elapsed_time" do
     it "should be the last elapsed time" do
-      @tx.elapsed_time.should be_close(ELAPS, 0.0002)
+      @tx.elapsed_time.should be_within(0.0002).of(ELAPS)
     end
 
     it "should be 0 if the transaction is not executed" do
@@ -105,11 +105,11 @@ describe RTA::Transaction do
 
   describe "#total_elapsed_time" do
     it "should be the total elapsed time" do
-      @tx.total_elapsed_time.should be_close(ELAPS * TX_COUNT, 0.0005 * TX_COUNT)
+      @tx.total_elapsed_time.should be_within(0.0005 * TX_COUNT).of(ELAPS * TX_COUNT)
     end
 
     it "should be close to actual elapsed time" do
-      @tx.total_elapsed_time.should be_close(@end_time - @first_time, 0.0005 * TX_COUNT)
+      @tx.total_elapsed_time.should be_within(0.0005 * TX_COUNT).of(@end_time - @first_time)
     end
 
     it "should be 0 if the transaction is not executed" do
@@ -133,7 +133,7 @@ describe RTA::Transaction do
 
   describe "#avg_elapsed_time" do
     it "should be close to actual elapsed time" do
-      @tx.avg_elapsed_time.should be_close(ELAPS, 0.0005)
+      @tx.avg_elapsed_time.should be_within(0.0005).of(ELAPS)
     end
 
     it "should be 0 if the transaction is not executed" do

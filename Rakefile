@@ -7,7 +7,7 @@ task :default => :spec
 
 desc "Run all specs"
 RSpec::Core::RakeTask.new(:spec) do |t|
-  t.rspec_opts = ['--color', '--format documentation']
+  t.rspec_opts = ['--color', '--format documentation', '--tty']
   t.pattern = 'spec/**/*_spec.rb'
 end
 

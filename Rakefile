@@ -1,5 +1,5 @@
 require 'rspec/core/rake_task'
-require 'rake/gempackagetask'
+require 'rubygems/package_task'
 require 'rake/rdoctask'
 require 'rake/clean'
 
@@ -18,7 +18,7 @@ end
 if File.exist?('rta.gemspec')
   desc "Package into distributable tar, zip and gem files"
   load 'rta.gemspec'
-  Rake::GemPackageTask.new(SPEC) do |pkg|
+  Gem::PackageTask.new(SPEC) do |pkg|
     pkg.need_zip = true
     pkg.need_tar = true
   end

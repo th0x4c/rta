@@ -36,16 +36,16 @@ end
 
 describe RTA::Session do
   before(:each) do
-    @log_stub = mock("RTA::Log")
-    @log_stub.stub!(:info).and_return("RTA::Log#info called")
-    @log_stub.stub!(:error).and_return("RTA::Log#error called")
-    @log_stub.stub!(:debug).and_return("RTA::Log#debug called")
-    RTA::Log.stub!(:new).and_return(@log_stub)
+    @log_stub = double("RTA::Log")
+    @log_stub.stub(:info).and_return("RTA::Log#info called")
+    @log_stub.stub(:error).and_return("RTA::Log#error called")
+    @log_stub.stub(:debug).and_return("RTA::Log#debug called")
+    RTA::Log.stub(:new).and_return(@log_stub)
 
-    @tx_stub = stub("RTA::Transaction")
-    @tx_stub.stub!(:execute).and_return(true)
-    @tx_stub.stub!(:sql_exception).and_return(nil)
-    RTA::Transaction.stub!(:new).and_return(@tx_stub)
+    @tx_stub = double("RTA::Transaction")
+    @tx_stub.stub(:execute).and_return(true)
+    @tx_stub.stub(:sql_exception).and_return(nil)
+    RTA::Transaction.stub(:new).and_return(@tx_stub)
 
     @session = ExampleSession.new(1)
   end
@@ -124,11 +124,11 @@ describe RTA::Session do
     end
 
     it "should output error message if SQLException happens" do
-      @sql_exception_stub = stub("SQLException")
-      @sql_exception_stub.stub!(:getErrorCode).and_return(600)
-      @sql_exception_stub.stub!(:getMessage).and_return("Some message")
-      @tx_stub.stub!(:sql_exception).and_return(@sql_exception_stub)
-      @tx_stub.stub!(:name).and_return("tx_name")
+      @sql_exception_stub = double("SQLException")
+      @sql_exception_stub.stub(:getErrorCode).and_return(600)
+      @sql_exception_stub.stub(:getMessage).and_return("Some message")
+      @tx_stub.stub(:sql_exception).and_return(@sql_exception_stub)
+      @tx_stub.stub(:name).and_return("tx_name")
 
       @log_stub.should_receive(:error)
       thread = Thread.new do
@@ -168,8 +168,8 @@ describe RTA::SessionManager do
   SESSION_COUNT = 5
 
   before(:each) do
-    @ex_session_mock = mock("ExampleSession")
-    ExampleSession.stub!(:new).and_return(@ex_session_mock)
+    @ex_session_mock = double("ExampleSession")
+    ExampleSession.stub(:new).and_return(@ex_session_mock)
 
     @session_manager = RTA::SessionManager.new(SESSION_COUNT, ExampleSession)
   end
@@ -259,7 +259,7 @@ describe RTA::SessionManager do
 
   describe "#stop_session_count" do
     it "should return a number of stop sessions" do
-      @ex_session_mock.stub!(:status).and_return(RTA::Session::STOP, RTA::Session::GO)
+      @ex_session_mock.stub(:status).and_return(RTA::Session::STOP, RTA::Session::GO)
       @session_manager.run
       @session_manager.stop_session_count.should == 1
     end

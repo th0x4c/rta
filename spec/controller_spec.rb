@@ -16,7 +16,7 @@ end
 
 describe RTA::Controller::Option do
   before(:each) do
-    FileTest.stub!(:exist?).with(EX_FILE).and_return(true)
+    FileTest.stub(:exist?).with(EX_FILE).and_return(true)
     @option = RTA::Controller::Option.new
   end
 
@@ -44,7 +44,7 @@ describe RTA::Controller::Option do
     it "should show help and exit if file with \"start\" command does not exist" do
       STDERR.should_receive(:puts).with(/#{Regexp.quote(RTA::Controller::BANNER)}/)
       no_exist_file_name = "no_exist_file.rb"
-      FileTest.stub!(:exist?).with(no_exist_file_name).and_return(false)
+      FileTest.stub(:exist?).with(no_exist_file_name).and_return(false)
       lambda { @option.parse(EX_ARGV - ["example.rb"] + [no_exist_file_name]) }.should raise_error
     end
 
@@ -71,16 +71,16 @@ end
 describe RTA::Controller::Runner do
   describe "#run" do
     before(:each) do
-      @session_manager = mock("RTA::SessionManager")
-      DRb.stub!(:start_service)
-      DRbObject.stub!(:new_with_uri).and_return(@session_manager)
+      @session_manager = double("RTA::SessionManager")
+      DRb.stub(:start_service)
+      DRbObject.stub(:new_with_uri).and_return(@session_manager)
     end
 
     it "should run RTA::SessionManager and start DRb service if command is \"start\"" do
       RTA::SessionManager.should_receive(:new).and_return(@session_manager)
       @session_manager.should_receive(:run)
       @session_manager.should_receive(:start_service)
-      FileTest.stub!(:exist?).with(EX_FILE).and_return(true)
+      FileTest.stub(:exist?).with(EX_FILE).and_return(true)
       Kernel.should_receive(:load).with(EX_FILE).and_return(true)
       RTA::Controller::Runner.run(*EX_ARGV)
     end

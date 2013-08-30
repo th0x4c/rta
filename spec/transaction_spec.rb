@@ -214,7 +214,7 @@ describe RTA::Transaction do
 
     it "should calculate even if the receiver's (or arg's) end_time is nil" do
       stat0 = @tx0.stat.dup
-      stat0.stub!(:first_time).and_return(@tx1.first_time)
+      stat0.stub(:first_time).and_return(@tx1.first_time)
 
       stat =  stat0 + @tx.stat
       stat.name.should ==  @tx0.name + @tx.name

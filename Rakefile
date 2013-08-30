@@ -1,6 +1,6 @@
 require 'rspec/core/rake_task'
 require 'rubygems/package_task'
-require 'rake/rdoctask'
+require 'rdoc/task'
 require 'rake/clean'
 
 CLOBBER.include('coverage')

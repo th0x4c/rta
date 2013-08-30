@@ -3,16 +3,12 @@ require 'rubygems/package_task'
 require 'rdoc/task'
 require 'rake/clean'
 
-CLOBBER.include('coverage')
-
 task :default => :spec
 
-desc "Run all specs with rcov"
+desc "Run all specs"
 RSpec::Core::RakeTask.new(:spec) do |t|
   t.rspec_opts = ['--color', '--format documentation']
   t.pattern = 'spec/**/*_spec.rb'
-  t.rcov = true
-  t.rcov_opts = %q[--text-summary --exclude "__FORWARDABLE__,eval,jsignal_internal,spec/"]
 end
 
 if File.exist?('rta.gemspec')

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 module RTA
   # ログを記録するクラス
   class Log
@@ -110,7 +111,7 @@ module RTA
     private
     def add_string_to_each_line(str, msg)
       return str if msg == ""
-      return msg.map { |line| str + line }.join
+      return msg.lines.map { |line| str + line }.join
     end
 
     def time_to_str(time)

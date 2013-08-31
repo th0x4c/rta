@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Usage: jruby -S spec -c -fs consistency_spec.rb
 
 require File.dirname(__FILE__) + '/../script/helper'
@@ -17,7 +18,6 @@ describe "TPC-C Consistency Requirements" do
 
     # 接続
     begin
-      # java.lang.Class.forName("oracle.jdbc.driver.OracleDriver")
       @con = DriverManager.getConnection(config["tpcc_url"],
                config["tpcc_user"], config["tpcc_password"])
       @con.setAutoCommit(false)

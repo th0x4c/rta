@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
 require 'yaml'
 require 'thread'
+import java.sql.DriverManager
+import Java::oracle.jdbc.driver.OracleDriver
 
 class TPCB < RTA::Session
   TPCB_HOME = File.dirname(__FILE__)
@@ -49,7 +52,6 @@ class TPCB < RTA::Session
 
     # 接続
     begin
-      # java.lang.Class.forName("oracle.jdbc.driver.OracleDriver")
       @con = DriverManager.getConnection(config["tpcb_url"],
                config["tpcb_user"], config["tpcb_password"])
       @con.setAutoCommit(false)

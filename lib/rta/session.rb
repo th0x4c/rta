@@ -1,7 +1,6 @@
+# -*- coding: utf-8 -*-
 require 'java'
 require 'thread'
-import java.sql.DriverManager
-import Java::oracle.jdbc.driver.OracleDriver
 require 'drb'
 
 module RTA

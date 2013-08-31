@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
+import java.sql.DriverManager
+import Java::oracle.jdbc.driver.OracleDriver
+
 class ExampleSession < RTA::Session
   def setup
     # 接続
     begin
-      # java.lang.Class.forName("oracle.jdbc.driver.OracleDriver")
       url = "jdbc:oracle:thin:@192.168.1.5:1521:XE"
       user = "scott"
       passwd = "tiger"

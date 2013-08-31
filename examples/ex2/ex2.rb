@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
 require 'singleton'
 import java.util.Properties
+import java.sql.DriverManager
+import Java::oracle.jdbc.driver.OracleDriver
 import Java::oracle.jdbc.pool.OracleOCIConnectionPool
 
 class ConnectionPool

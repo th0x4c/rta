@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
 require 'yaml'
 require 'thread'
 import java.sql.Timestamp
+import java.sql.DriverManager
+import Java::oracle.jdbc.driver.OracleDriver
 
 require File.dirname(__FILE__) + '/script/helper'
 
@@ -82,7 +85,6 @@ class TPCC < RTA::Session
 
     # 接続
     begin
-      # java.lang.Class.forName("oracle.jdbc.driver.OracleDriver")
       @con = DriverManager.getConnection(config["tpcc_url"],
                config["tpcc_user"], config["tpcc_password"])
       @con.setAutoCommit(false)

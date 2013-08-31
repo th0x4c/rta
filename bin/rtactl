@@ -9,12 +9,20 @@ fi
 JRUBY_CMD=`which jruby 2>&1 | grep -v "no jruby"`
 if [ "$JRUBY_CMD" = "" ]
 then
-  JRUBY_COMPLETE="$RTA_HOME/lib/jruby/jruby-complete-1.6.3.jar"
+  if [ "$CLASSPATH" != "" ]
+  then
+    JRUBY_COMPLETE=`echo $CLASSPATH | sed 's/:/ /g' | xargs -n 1 basename | grep jruby-complete.*jar`
+  fi
+  if [ "$JRUBY_COMPLETE" = "" ]
+  then
+    echo "JRuby not found (install JRuby or add jruby-complete-x.x.x.jar to CLASSPATH)"
+    exit 1
+  fi
   JAVA_MEM=-Xmx500m
   JAVA_STACK=-Xss2048k
   JAVA_VM=-client
   JAVA_OPTS="$JAVA_VM $JAVA_MEM $JAVA_STACK"
-  JRUBY_CMD="java $JAVA_OPTS -classpath $JRUBY_COMPLETE:$CLASSPATH org.jruby.Main"
+  JRUBY_CMD="java $JAVA_OPTS org.jruby.Main"
 fi
 
 # 引数をカンマ区切りの文字列 ARGV にする

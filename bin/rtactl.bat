@@ -6,12 +6,11 @@ set RTA_HOME=%~dp0..\
 set JRUBY_CMD=
 for %%i in (jruby.bat) do if exist %%~$PATH:i set JRUBY_CMD=%%~$PATH:i
 if "!JRUBY_CMD!" == "" (
-  set JRUBY_COMPLETE=!RTA_HOME!\lib\jruby\jruby-complete-1.5.5.jar
   set JAVA_MEM=-Xmx500m
   set JAVA_STACK=-Xss1024k
   set JAVA_VM=-client
   set JAVA_OPTS=!JAVA_VM! !JAVA_MEM! !JAVA_STACK!
-  set JRUBY_CMD=java !JAVA_OPTS! -classpath "!JRUBY_COMPLETE!;%CLASSPATH%" org.jruby.Main
+  set JRUBY_CMD=java !JAVA_OPTS! org.jruby.Main
 )
 
 rem ˆø”‚ğƒJƒ“ƒ}‹æØ‚è‚Ì•¶š—ñ ARGV ‚É‚·‚é

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 require 'optparse'
 require 'drb'
 require 'pp'
@@ -91,14 +92,14 @@ module RTA
       # インスタンスを生成し, {#run} を実行するためのヘルパメソッド
       #
       # @param [Array<String>] argv 引数の文字列の配列
-      def self.run(*argv)
-        new.run(*argv)
+      def self.run(argv)
+        new.run(argv)
       end
 
       # 与えられた引数に従い, コマンドを実行
       #
       # @param [Array<String>] argv 引数の文字列の配列
-      def run(*argv)
+      def run(argv)
         opt = RTA::Controller::Option.new
         opt.parse(argv)
 

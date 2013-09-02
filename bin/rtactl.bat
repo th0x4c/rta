@@ -13,17 +13,7 @@ if "!JRUBY_CMD!" == "" (
   set JRUBY_CMD=java !JAVA_OPTS! org.jruby.Main
 )
 
-rem 引数をカンマ区切りの文字列 ARGV にする
-set ARGV='%1'
-for %%a in (%*) do if !ARGV! == '%1' (
-    set arg='%%a' 
-    set ARGV=!arg!
-  ) else (
-    set arg='%%a' 
-    set ARGV=!ARGV!,!arg!
-  )
-
 rem RUBYOPT が指定されているとエラーになるため RUBYOPT を unset する
 set RUBYOPT=
 
-!JRUBY_CMD! -e "require '!RTA_HOME!\lib\rta'; RTA::Controller::Runner.run(!ARGV!)"
+!JRUBY_CMD! !RTA_HOME!\bin\rtactl.rb %*

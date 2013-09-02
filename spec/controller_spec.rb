@@ -82,49 +82,49 @@ describe RTA::Controller::Runner do
       @session_manager.should_receive(:start_service)
       FileTest.stub(:exist?).with(EX_FILE).and_return(true)
       Kernel.should_receive(:load).with(EX_FILE).and_return(true)
-      RTA::Controller::Runner.run(*EX_ARGV)
+      RTA::Controller::Runner.run(EX_ARGV)
     end
 
     it "should stop RTA::SessionManager if command is \"stop\"" do
       @session_manager.should_receive(:stop)
       ex_argv = "-p #{EX_PORT} stop".split
-      RTA::Controller::Runner.run(*ex_argv)
+      RTA::Controller::Runner.run(ex_argv)
     end
 
     it "should stop specified sessions if command is \"stop\" with \"-s\"" do
       @session_manager.should_receive(:stop).with([3, 4])
       ex_argv = "-p #{EX_PORT} stop -s 3,4".split
-      RTA::Controller::Runner.run(*ex_argv)
+      RTA::Controller::Runner.run(ex_argv)
     end
 
     it "should go RTA::SessionManager if command is \"go\"" do
       @session_manager.should_receive(:go)
       ex_argv = "-p #{EX_PORT} go".split
-      RTA::Controller::Runner.run(*ex_argv)
+      RTA::Controller::Runner.run(ex_argv)
     end
 
     it "should go specified sessions if command is \"go\" with \"-s\"" do
       @session_manager.should_receive(:go).with([3, 4])
       ex_argv = "-p #{EX_PORT} go -s 3,4".split
-      RTA::Controller::Runner.run(*ex_argv)
+      RTA::Controller::Runner.run(ex_argv)
     end
 
     it "should standby RTA::SessionManager if command is \"standby\"" do
       @session_manager.should_receive(:standby)
       ex_argv = "-p #{EX_PORT} standby".split
-      RTA::Controller::Runner.run(*ex_argv)
+      RTA::Controller::Runner.run(ex_argv)
     end
 
     it "should standby specified sessions if command is \"standby\" with \"-s\"" do
       @session_manager.should_receive(:standby).with([3, 4])
       ex_argv = "-p #{EX_PORT} standby -s 3,4".split
-      RTA::Controller::Runner.run(*ex_argv)
+      RTA::Controller::Runner.run(ex_argv)
     end
 
     it "should launch console if command is \"console\"" do
       IRB.should_receive(:start)
       ex_argv = "-p #{EX_PORT} console".split
-      RTA::Controller::Runner.run(*ex_argv)
+      RTA::Controller::Runner.run(ex_argv)
     end
   end
 end

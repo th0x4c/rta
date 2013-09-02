@@ -25,17 +25,4 @@ then
   JRUBY_CMD="java $JAVA_OPTS org.jruby.Main"
 fi
 
-# 引数をカンマ区切りの文字列 ARGV にする
-ARGV=""
-for arg in "$@"
-do
-  arg="'$arg'"
-  if [ "$ARGV" = "" ]
-  then
-    ARGV="$arg"
-  else
-    ARGV="$ARGV,$arg"
-  fi
-done
-
-exec $JRUBY_CMD -e "require '$RTA_HOME/lib/rta'; RTA::Controller::Runner.run($ARGV)"
+exec $JRUBY_CMD $RTA_HOME/bin/rtactl.rb $@

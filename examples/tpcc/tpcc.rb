@@ -72,17 +72,6 @@ class TPCC < RTA::Session
     @keying_time = config["keying_time"]
     @think_time = config["think_time"]    
 
-    @min_think_time = {"New-Order" => 0, "Payment" => 0, "Order-Status" => 0,
-                       "Delivery" => 0, "Stock-Level" => 0}
-    @max_think_time = {"New-Order" => nil, "Payment" => nil, "Order-Status" => nil,
-                       "Delivery" => nil, "Stock-Level" => nil}
-    @count_think_time =  {"New-Order" => 0, "Payment" => 0, "Order-Status" => 0,
-                          "Delivery" => 0, "Stock-Level" => 0}
-    @total_think_time =  {"New-Order" => 0, "Payment" => 0, "Order-Status" => 0,
-                          "Delivery" => 0, "Stock-Level" => 0}
-    @think_time_stat = {:min => @min_think_time, :max => @max_think_time,
-                        :count => @count_think_time, :total => @total_think_time}
-
     # 接続
     begin
       @con = DriverManager.getConnection(config["tpcc_url"],
@@ -122,7 +111,9 @@ class TPCC < RTA::Session
   end
 
   def teardown_last
-    disclosure_report
+    tx_names = ["New-Order", "Payment", "Order-Status", "Delivery",
+                "Stock-Level"]
+    log.info(numerical_quantities_summary(tx_names))
   end
 
   def transactions
@@ -377,7 +368,7 @@ class TPCC < RTA::Session
       sleep(keying_time("New-Order"))
     end
 
-    tx.after_each { sleep_think_time("New-Order") }
+    tx.after_each { sleep(think_time("New-Order")) }
 
     tx.whenever_sqlerror do |ex|
       @con.rollback
@@ -668,7 +659,7 @@ class TPCC < RTA::Session
       sleep(keying_time("Payment"))
     end
 
-    tx.after_each { sleep_think_time("Payment") }
+    tx.after_each { sleep(think_time("Payment")) }
 
     tx.whenever_sqlerror do
       @con.rollback
@@ -820,7 +811,7 @@ class TPCC < RTA::Session
       sleep(keying_time("Order-Status"))
     end
 
-    tx.after_each { sleep_think_time("Order-Status") }
+    tx.after_each { sleep(think_time("Order-Status")) }
 
     tx.whenever_sqlerror do
       @con.rollback
@@ -969,7 +960,7 @@ class TPCC < RTA::Session
       sleep(keying_time("Delivery"))
     end
 
-    tx.after_each { sleep_think_time("Delivery") }
+    tx.after_each { sleep(think_time("Delivery")) }
 
     tx.whenever_sqlerror do
       @con.rollback
@@ -1028,7 +1019,7 @@ class TPCC < RTA::Session
       sleep(keying_time("Stock-Level"))
     end
 
-    tx.after_each { sleep_think_time("Stock-Level") }
+    tx.after_each { sleep(think_time("Stock-Level")) }
 
     tx.whenever_sqlerror do
       @con.rollback
@@ -1046,109 +1037,11 @@ class TPCC < RTA::Session
     return @last_w_id - @first_w_id + 1
   end
 
-  def disclosure_report
-    new_order_stat = get_stat_by_name("New-Order")
-    payment_stat = get_stat_by_name("Payment")
-    order_status_stat = get_stat_by_name("Order-Status")
-    delivery_stat = get_stat_by_name("Delivery")
-    stock_level_stat = get_stat_by_name("Stock-Level")
-
-    tx_stats = [new_order_stat, payment_stat, order_status_stat,
-                delivery_stat, stock_level_stat]
-    all_stat = sessions.map { |ses| ses.stat }.inject { |result, st| result += st }
-
-    first_time = all_stat.first_time
-    end_time = all_stat.end_time
-
-    return if first_time.nil? || end_time.nil?
-    if end_time - first_time > 0
-      tpmc = new_order_stat.count * 60 / (end_time - first_time)
-    else
-      tpmc = 0
-    end
-
-    log.info("==================================================================")
-    log.info("================== Numerical Quantities Summary ==================")
-    log.info("==================================================================")
-
-    log.info(sprintf("MQTh, computed Maximum Qualified Throughput %17.2f tpmC", tpmc))
-    log.info("")
-
-    # log.info("Response Times (90th percentile/ Average/ maximum) in seconds")
-    log.info("Response Times (minimum/ Average/ maximum) in seconds")
-    tx_stats.each do |tx_st|
-      log.info(sprintf("  - %-34s %7.3f / %7.3f / %7.3f",
-                       tx_st.name, (tx_st.min_elapsed_time || 0), tx_st.avg_elapsed_time, (tx_st.max_elapsed_time || 0)))
-    end
-    log.info("")
-
-    log.info("Transaction Mix, in percent of total transactions")
-    tx_stats.each do |tx_st|
-      percent = all_stat.count == 0 ? 0 : tx_st.count * 100 / all_stat.count.to_f
-      log.info(sprintf("  - %-54s %5.2f %", tx_st.name, percent))
-    end
-    log.info("")
-
-    log.info("Keying/Think Times (in seconds),")
-    log.info("                         Min.          Average           Max.")
-    tx_stats.each do |tx_st|
-      keying_time = @keying_time[tx_st.name]
-      min_tt = sessions.map { |ses| ses.think_time_stat[:min][tx_st.name] }.min
-      max_tt = sessions.map { |ses| ses.think_time_stat[:max][tx_st.name] || 0 }.max
-      count_tt = sessions.map { |ses| ses.think_time_stat[:count][tx_st.name] }.
-                   inject { |count, item| count += item }
-      total_tt = sessions.map { |ses| ses.think_time_stat[:total][tx_st.name] }.
-                   inject { |total, item| total += item }
-      avg_tt = count_tt == 0 ? 0 : total_tt / count_tt
-      log.info(sprintf("  - %-14s %7.3f/%7.3f %7.3f/%7.3f %7.3f/%7.3f",
-                       tx_st.name, keying_time, min_tt, keying_time, avg_tt,
-                       keying_time, max_tt))
-    end
-    log.info("")
-
-    log.info("Test Duration")
-    log.info(sprintf("  - Ramp-up time %41.3f seconds", 0.0))
-    log.info(sprintf("  - Measurement interval %33.3f seconds", end_time - first_time))
-    log.info("  - Number of transactions (all types)")
-    log.info(sprintf("    completed in measurement interval %28d", all_stat.count))
-
-    log.info("==================================================================")
-  end
-
-  def get_stat_by_name(name)
-    stat = RTA::TransactionStatistic.new
-    payment_stat = sessions.each do |ses|
-      stat ||= RTA::TransactionStatistic.new
-      stat += ses.transactions.find { |tx| tx.name == name }.stat
-    end
-    stat.name = name
-    return stat
-  end
-
   def keying_time(tx_name)
     return @keying_time[tx_name]
   end
 
   def think_time(tx_name)
     return (- Math.log(rand) * @think_time[tx_name])
-  end
-
-  def sleep_think_time(tx_name)
-    tt = think_time(tx_name)
-    sleep tt
-    @count_think_time[tx_name] += 1
-    @total_think_time[tx_name] += tt
-    if @count_think_time[tx_name] == 1
-      @max_think_time[tx_name] = tt
-    else
-      @max_think_time[tx_name] =
-        tt > @max_think_time[tx_name] ? tt : @max_think_time[tx_name]
-      @min_think_time[tx_name] =
-        tt < @min_think_time[tx_name] ? tt : @min_think_time[tx_name]
-    end
-  end
-
-  def think_time_stat
-    return @think_time_stat
   end
 end

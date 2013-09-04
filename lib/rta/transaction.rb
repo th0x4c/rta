@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 require 'java'
 import java.sql.SQLException
 require "forwardable"
@@ -262,9 +263,6 @@ module RTA
                                 :error_count, :sql_exception,
                                 :avg_elapsed_time, :tps, :to_s
 
-    attr_reader :statistic
-    alias_method :stat, :statistic
-
     # トランザクションを生成
     #
     # @param [String] name トランザクション名
@@ -272,13 +270,16 @@ module RTA
     # @return [Transaction]
     def initialize(name = "", &block)
       @statistic = TransactionStatistic.new(name)
+      @statistics = {:before => TransactionStatistic.new("BEFORE " + name),
+                     :tx => @statistic,
+                     :after => TransactionStatistic.new("AFTER " + name)}
       @transaction = block
     end
 
     # トランザクションを実行
     def execute
       @before_all.call if @before_all && @statistic.count == 0
-      @before_each.call if @before_each
+      @statistics[:before].start { @before_each.call } if @before_each
       @statistic.start do
         begin
           @transaction.call
@@ -287,7 +288,7 @@ module RTA
           @whenever_sqlerror.call(e.cause) if @whenever_sqlerror
         end
       end
-      @after_each.call if @after_each
+      @statistics[:after].start { @after_each.call } if @after_each
     end
 
     # 初回トランザクション実行前に1度だけ実行される処理を登録
@@ -311,5 +312,14 @@ module RTA
     def whenever_sqlerror(&block)
       @whenever_sqlerror = block
     end
+
+    # 指定されたフェーズの {TransactionStatistic} を返す.
+    #
+    # @param [Symbol] phase フェーズ, `:before` または `:tx` または `:after`
+    # @return [TransactionStatistic]
+    def statistic(phase = :tx)
+      return @statistics[phase]
+    end
+    alias_method :stat, :statistic
   end
 end

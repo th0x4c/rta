@@ -28,6 +28,114 @@ module RTA
     def to_s
       return statistic.to_s
     end
+
+    # {Session} の保持する {Transaction} の Numerical Quantities Summary を表す
+    # 文字列を返す.
+    #
+    # @param [Array<String>] tx_names {Transaction} 名の配列
+    # @param [Array<Session>] sess {Session} の配列
+    # @return [String]
+    def numerical_quantities_summary(tx_names = transaction_names,
+                                     sess = sessions)
+      stats = tx_names.map { |name| stat_by_name(name, sess) }
+      before_stats = tx_names.map { |name| stat_by_name(name, sess, :before) }
+      after_stats = tx_names.map { |name| stat_by_name(name, sess, :after) }
+      all_stat = stats.inject { |result, st| result += st }
+
+      return "" if all_stat.first_time.nil? || all_stat.end_time.nil?
+
+      measurement_interval = all_stat.end_time - all_stat.first_time
+      tpmc = measurement_interval == 0 ?
+             0 : stats[0].count * 60 / measurement_interval
+
+      dr = Array.new
+      dr << "================================================================"
+      dr << "================= Numerical Quantities Summary ================="
+      dr << "================================================================"
+
+      dr << sprintf("MQTh, computed Maximum Qualified Throughput %16.2f tpm",
+                    tpmc)
+      stats.each do |st|
+        dr << sprintf("  - %-39s %16.2f tps", st.name, st.tps)
+      end
+      dr << ""
+
+      # dr << "Response Times (90th percentile/ Average/ maximum) in seconds"
+      dr << "Response Times (minimum/ Average/ maximum) in seconds"
+      stats.each do |st|
+        dr << sprintf("  - %-32s %7.3f / %7.3f / %7.3f",
+                      st.name, st.min_elapsed_time || 0, st.avg_elapsed_time,
+                      st.max_elapsed_time || 0)
+      end
+      dr << ""
+
+      dr << "Transaction Mix, in percent of total transactions"
+      stats.each do |st|
+        percent = all_stat.count == 0 ?
+                  0 : st.count * 100 / all_stat.count.to_f
+        dr << sprintf("  - %-33s %15d / %6.2f %%", st.name, st.count, percent)
+      end
+      dr << ""
+
+      dr << "Errors (number of errors/ percentage)"
+      stats.each do |st|
+        percent = st.count == 0 ?
+                  0 : st.error_count * 100 / st.count.to_f
+        dr << sprintf("  - %-33s %15d / %6.2f %%",
+                      st.name, st.error_count, percent)
+      end
+      dr << ""
+
+      dr << "Keying/Think Times (in seconds),"
+      dr << "                         Min.          Average           Max."
+      tx_names.each_with_index do |name, i|
+        dr << sprintf("  - %-12s %7.3f/%7.3f %7.3f/%7.3f %7.3f/%7.3f",
+                      name,
+                      before_stats[i].min_elapsed_time.to_f,
+                      after_stats[i].min_elapsed_time.to_f,
+                      before_stats[i].avg_elapsed_time.to_f,
+                      after_stats[i].avg_elapsed_time.to_f,
+                      before_stats[i].max_elapsed_time.to_f,
+                      after_stats[i].max_elapsed_time.to_f)
+      end
+      dr << ""
+
+      dr << "Test Duration"
+      dr << sprintf("  - Ramp-up time %39.3f seconds", 0.0)
+      dr << sprintf("  - Measurement interval %31.3f seconds",
+                    measurement_interval)
+      dr << sprintf("             (%23s / %23s)",
+                    all_stat.first_time.strftime("%Y-%m-%d %X.%3N"),
+                    all_stat.end_time.strftime("%Y-%m-%d %X.%3N"))
+      dr << "  - Number of transactions (all types)"
+      dr << sprintf("    completed in measurement interval %26d",
+                    all_stat.count)
+      dr << "================================================================"
+
+      return dr.join("\n")
+    end
+
+    # {Session} の保持する指定した {Transaction} の {TransactionStatistic} を
+    # すべて集計して返す.
+    #
+    # @param [String] name {Transaction} 名
+    # @param [Array<Session>] sess {Session} の配列
+    # @return [TransactionStatistic]
+    def stat_by_name(name, sess = sessions, phase = :tx)
+      ts = RTA::TransactionStatistic.new
+      sess.each do |ses|
+        ts += ses.transactions.find { |tx| tx.name == name }.stat(phase)
+      end
+      ts.name = name
+      return ts
+    end
+
+    # 保持するすべての {Transaction} 名の配列を返す.
+    #
+    # @return [Array<String>]
+    def transaction_names
+      transactions.map { |tx| tx.name }.uniq.sort
+    end
   end
 
   # セッションを表すクラス

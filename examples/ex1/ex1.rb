@@ -6,7 +6,7 @@ class ExampleSession < RTA::Session
   def setup
     # 接続
     begin
-      url = "jdbc:oracle:thin:@192.168.1.5:1521:XE"
+      url = "jdbc:oracle:thin:@//192.168.1.5:1521/XE"
       user = "scott"
       passwd = "tiger"
       @con = DriverManager.getConnection(url, user, passwd)

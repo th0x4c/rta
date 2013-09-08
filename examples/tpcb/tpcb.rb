@@ -41,7 +41,7 @@ class TPCB < RTA::Session
     #
     # tpcb_user: tpcb
     # tpcb_password: tpcb
-    # tpcb_url: jdbc:oracle:thin:@192.168.1.5:1521:XE
+    # tpcb_url: jdbc:oracle:thin:@//192.168.1.5:1521/XE
     # branch_range: 1..10
     config = Hash.new
     File.open(TPCB_HOME + '/config/config.yml', 'r') do |file|

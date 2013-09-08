@@ -33,7 +33,7 @@ class TPCCLoad < RTA::Session
     #
     # tpcc_user: tpcc
     # tpcc_password: tpcc
-    # tpcc_url: jdbc:oracle:thin:@192.168.1.5:1521:XE
+    # tpcc_url: jdbc:oracle:thin:@//192.168.1.5:1521/XE
     # warehouse_range: 1..10
     config = Hash.new
     File.open(TPCC_HOME + '/config/config.yml', 'r') do |file|

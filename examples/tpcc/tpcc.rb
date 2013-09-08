@@ -610,7 +610,7 @@ class TPCC < RTA::Session
         @con.commit
       ensure
         unless @prepare_statement
-          @stmts["Payment"].each { |s| s.close if s; s = nil }
+          @stmts["Payment"].each { |s| s.close if s }
           @stmts["Payment"] = Array.new
         end
       end

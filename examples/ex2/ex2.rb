@@ -37,32 +37,34 @@ class ExampleSession < RTA::Session
 
     # トランザクション
     @tx1 = RTA::Transaction.new("tx1") do
-      @con = @cpool.getConnection
-      stmt = @con.prepareStatement("select ename, comm from emp where empno = 7900")
-      rset = stmt.executeQuery
-      while rset.next
-        log.info("sid: #{@session_id} " + rset.getString(1) + " " + rset.getInt(2).to_s)
+      begin
+        @con = @cpool.getConnection
+        stmt = @con.prepareStatement("select ename, comm from emp where empno = 7900")
+        rset = stmt.executeQuery
+        while rset.next
+          log.info("sid: #{@session_id} " + rset.getString(1) + " " + rset.getInt(2).to_s)
+        end
+      ensure
+        rset.close if rset
+        stmt.close if stmt
+        @con.close if @con
       end
-      rset.close
-      stmt.close
-      @con.close
     end
     @tx1.after { sleep 1 }
-    @tx1.whenever_sqlerror { @con.close }
 
     @tx2 = RTA::Transaction.new("tx2") do
-      @con = @cpool.getConnection
-      stmt = @con.createStatement
-      stmt.executeUpdate("update emp set comm = #{@session_id} where empno = 7900")
-      @con.commit
-      stmt.close
-      @con.close
+      begin
+        @con = @cpool.getConnection
+        stmt = @con.createStatement
+        stmt.executeUpdate("update emp set comm = #{@session_id} where empno = 7900")
+        @con.commit
+      ensure
+        stmt.close if stmt
+        @con.close if @con
+      end
     end
     @tx2.after { sleep 0.5 }
-    @tx2.whenever_sqlerror do
-      @con.rollback
-      @con.close
-    end
+    @tx2.whenever_sqlerror { @con.rollback }
 
     # ログ
     # self.log = RTA::Log.new("./test_#{@session_id}.log")

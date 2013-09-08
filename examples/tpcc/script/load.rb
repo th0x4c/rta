@@ -130,28 +130,31 @@ class TPCCLoad < RTA::Session
   def load_items
     unless @load_items
       @load_items = RTA::Transaction.new("load items") do
-        i_id = @loading
-        # I_IM_ID random within [1 .. 10,000]
-        i_im_id = random_number(1, 10000)
-        i_name = make_alpha_string(14, 24)
-        i_price = random_number(100, 10000) / 100.0
-        i_data = make_alpha_string(26, 50)
-        insert_original!(i_data) if rand(10) == 0
+        begin
+          i_id = @loading
+          # I_IM_ID random within [1 .. 10,000]
+          i_im_id = random_number(1, 10000)
+          i_name = make_alpha_string(14, 24)
+          i_price = random_number(100, 10000) / 100.0
+          i_data = make_alpha_string(26, 50)
+          insert_original!(i_data) if rand(10) == 0
 
-        log.debug("IID: #{i_id}, Name: #{i_name}, Price: #{i_price}")
+          log.debug("IID: #{i_id}, Name: #{i_name}, Price: #{i_price}")
 
-        sql = "INSERT INTO item (i_id, i_im_id, i_name, i_price, i_data) "+
-              "VALUES (?, ?, ?, ?, ?)"
-        stmt = @con.prepareStatement(sql)
-        stmt.setInt(1, i_id)
-        stmt.setInt(2, i_im_id)
-        stmt.setString(3, i_name)
-        stmt.setDouble(4, i_price)
-        stmt.setString(5, i_data)
-        stmt.executeUpdate
-        stmt.close
+          sql = "INSERT INTO item (i_id, i_im_id, i_name, i_price, i_data) "+
+                "VALUES (?, ?, ?, ?, ?)"
+          stmt = @con.prepareStatement(sql)
+          stmt.setInt(1, i_id)
+          stmt.setInt(2, i_im_id)
+          stmt.setString(3, i_name)
+          stmt.setDouble(4, i_price)
+          stmt.setString(5, i_data)
+          stmt.executeUpdate
 
-        log.info(i_id.to_s) if i_id % 5000 == 0
+          log.info(i_id.to_s) if i_id % 5000 == 0
+        ensure
+          stmt.close if stmt
+        end
       end
 
       @load_items.after_each do
@@ -171,29 +174,32 @@ class TPCCLoad < RTA::Session
   def load_ware
     unless @load_ware
       @load_ware = RTA::Transaction.new("load ware") do
-        w_id = @loading + @first_warehouse_id - 1
-        w_name = make_alpha_string(6, 10)
-        w_street_1, w_street_2, w_city, w_state, w_zip = make_address
-        w_tax = random_number(0, 20) / 100.0 # W_TAX random within [0.0000 .. 0.2000]
-        w_ytd = 300000.00 # W_YTD = 300,000.00
+        begin
+          w_id = @loading + @first_warehouse_id - 1
+          w_name = make_alpha_string(6, 10)
+          w_street_1, w_street_2, w_city, w_state, w_zip = make_address
+          w_tax = random_number(0, 20) / 100.0 # W_TAX random within [0.0000 .. 0.2000]
+          w_ytd = 300000.00 # W_YTD = 300,000.00
 
-        log.debug("WID: #{w_id}, Name: #{w_name}, Tax: #{w_tax}")
+          log.debug("WID: #{w_id}, Name: #{w_name}, Tax: #{w_tax}")
 
-        sql = "INSERT INTO warehouse (w_id, w_name, " +
-              "w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd) " +
-              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        stmt = @con.prepareStatement(sql)
-        stmt.setInt(1, w_id)
-        stmt.setString(2, w_name)
-        stmt.setString(3, w_street_1)
-        stmt.setString(4, w_street_2)
-        stmt.setString(5, w_city)
-        stmt.setString(6, w_state)
-        stmt.setString(7, w_zip)
-        stmt.setDouble(8, w_tax)
-        stmt.setDouble(9, w_ytd)
-        stmt.executeUpdate
-        stmt.close
+          sql = "INSERT INTO warehouse (w_id, w_name, " +
+                "w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          stmt = @con.prepareStatement(sql)
+          stmt.setInt(1, w_id)
+          stmt.setString(2, w_name)
+          stmt.setString(3, w_street_1)
+          stmt.setString(4, w_street_2)
+          stmt.setString(5, w_city)
+          stmt.setString(6, w_state)
+          stmt.setString(7, w_zip)
+          stmt.setDouble(8, w_tax)
+          stmt.setDouble(9, w_ytd)
+          stmt.executeUpdate
+        ensure
+          stmt.close if stmt
+        end
       end
 
       @load_ware.after_each do
@@ -209,51 +215,54 @@ class TPCCLoad < RTA::Session
   def load_stock
     unless @load_stock
       @load_stock = RTA::Transaction.new("load stock") do
-        s_w_id = @w_id
-        s_i_id = (@loading - 1) % MAXITEMS + 1
-        s_quantity = random_number(10, 100)
-        s_dist_01 = make_alpha_string(24, 24)
-        s_dist_02 = make_alpha_string(24, 24)
-        s_dist_03 = make_alpha_string(24, 24)
-        s_dist_04 = make_alpha_string(24, 24)
-        s_dist_05 = make_alpha_string(24, 24)
-        s_dist_06 = make_alpha_string(24, 24)
-        s_dist_07 = make_alpha_string(24, 24)
-        s_dist_08 = make_alpha_string(24, 24)
-        s_dist_09 = make_alpha_string(24, 24)
-        s_dist_10 = make_alpha_string(24, 24)
-        s_data = make_alpha_string(26, 50)
-        insert_original!(s_data) if rand(10) == 0
+        begin
+          s_w_id = @w_id
+          s_i_id = (@loading - 1) % MAXITEMS + 1
+          s_quantity = random_number(10, 100)
+          s_dist_01 = make_alpha_string(24, 24)
+          s_dist_02 = make_alpha_string(24, 24)
+          s_dist_03 = make_alpha_string(24, 24)
+          s_dist_04 = make_alpha_string(24, 24)
+          s_dist_05 = make_alpha_string(24, 24)
+          s_dist_06 = make_alpha_string(24, 24)
+          s_dist_07 = make_alpha_string(24, 24)
+          s_dist_08 = make_alpha_string(24, 24)
+          s_dist_09 = make_alpha_string(24, 24)
+          s_dist_10 = make_alpha_string(24, 24)
+          s_data = make_alpha_string(26, 50)
+          insert_original!(s_data) if rand(10) == 0
 
-        log.debug("SID: #{s_i_id}, WID: #{s_w_id}, Quan: #{s_quantity}")
+          log.debug("SID: #{s_i_id}, WID: #{s_w_id}, Quan: #{s_quantity}")
 
-        sql = "INSERT INTO stock (s_i_id, s_w_id, s_quantity, " +
-              "s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, " +
-              "s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10, " +
-              "s_data, s_ytd, s_order_cnt, s_remote_cnt) " +
-              "VALUES (?, ?, ?, " +
-              "?, ?, ?, ?, ?, " +
-              "?, ?, ?, ?, ?, " +
-              "?, 0, 0, 0)"
-        stmt = @con.prepareStatement(sql)
-        stmt.setInt(1, s_i_id)
-        stmt.setInt(2, s_w_id)
-        stmt.setInt(3, s_quantity)
-        stmt.setString(4, s_dist_01)
-        stmt.setString(5, s_dist_02)
-        stmt.setString(6, s_dist_03)
-        stmt.setString(7, s_dist_04)
-        stmt.setString(8, s_dist_05)
-        stmt.setString(9, s_dist_06)
-        stmt.setString(10, s_dist_07)
-        stmt.setString(11, s_dist_08)
-        stmt.setString(12, s_dist_09)
-        stmt.setString(13, s_dist_10)
-        stmt.setString(14, s_data)
-        stmt.executeUpdate
-        stmt.close
+          sql = "INSERT INTO stock (s_i_id, s_w_id, s_quantity, " +
+                "s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, " +
+                "s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10, " +
+                "s_data, s_ytd, s_order_cnt, s_remote_cnt) " +
+                "VALUES (?, ?, ?, " +
+                "?, ?, ?, ?, ?, " +
+                "?, ?, ?, ?, ?, " +
+                "?, 0, 0, 0)"
+          stmt = @con.prepareStatement(sql)
+          stmt.setInt(1, s_i_id)
+          stmt.setInt(2, s_w_id)
+          stmt.setInt(3, s_quantity)
+          stmt.setString(4, s_dist_01)
+          stmt.setString(5, s_dist_02)
+          stmt.setString(6, s_dist_03)
+          stmt.setString(7, s_dist_04)
+          stmt.setString(8, s_dist_05)
+          stmt.setString(9, s_dist_06)
+          stmt.setString(10, s_dist_07)
+          stmt.setString(11, s_dist_08)
+          stmt.setString(12, s_dist_09)
+          stmt.setString(13, s_dist_10)
+          stmt.setString(14, s_data)
+          stmt.executeUpdate
 
-        log.info(s_i_id.to_s) if s_i_id % 5000 == 0
+          log.info(s_i_id.to_s) if s_i_id % 5000 == 0
+        ensure
+          stmt.close if stmt
+        end
       end
 
       @load_stock.after_each do
@@ -273,36 +282,39 @@ class TPCCLoad < RTA::Session
   def load_district
     unless @load_district
       @load_district = RTA::Transaction.new("load district") do
-        d_w_id = @w_id
-        d_ytd = 30000.0
-        d_next_o_id = 3001
-        d_id = (@loading - 1) % DIST_PER_WARE + 1
-        d_name = make_alpha_string(6, 10)
-        d_street_1, d_street_2, d_city, d_state, d_zip = make_address
-        d_tax = random_number(0, 20) / 100.0 # D_TAX random within [0.0000 .. 0.2000]
+        begin
+          d_w_id = @w_id
+          d_ytd = 30000.0
+          d_next_o_id = 3001
+          d_id = (@loading - 1) % DIST_PER_WARE + 1
+          d_name = make_alpha_string(6, 10)
+          d_street_1, d_street_2, d_city, d_state, d_zip = make_address
+          d_tax = random_number(0, 20) / 100.0 # D_TAX random within [0.0000 .. 0.2000]
 
-        log.debug("DID: #{d_id}, WID: #{d_w_id}, Name: #{d_name}, Tax: #{d_tax}")
+          log.debug("DID: #{d_id}, WID: #{d_w_id}, Name: #{d_name}, Tax: #{d_tax}")
 
-        sql = "INSERT INTO district (d_id, d_w_id, d_name, " +
-              "d_street_1, d_street_2, d_city, d_state, d_zip, " +
-              "d_tax, d_ytd, d_next_o_id) " +
-              "VALUES (?, ?, ?, " +
-              "?, ?, ?, ?, ?, " +
-              "?, ?, ?)"
-        stmt = @con.prepareStatement(sql)
-        stmt.setInt(1, d_id)
-        stmt.setInt(2, d_w_id)
-        stmt.setString(3, d_name)
-        stmt.setString(4, d_street_1)
-        stmt.setString(5, d_street_2)
-        stmt.setString(6, d_city)
-        stmt.setString(7, d_state)
-        stmt.setString(8, d_zip)
-        stmt.setDouble(9, d_tax)
-        stmt.setDouble(10, d_ytd)
-        stmt.setInt(11, d_next_o_id)
-        stmt.executeUpdate
-        stmt.close
+          sql = "INSERT INTO district (d_id, d_w_id, d_name, " +
+                "d_street_1, d_street_2, d_city, d_state, d_zip, " +
+                "d_tax, d_ytd, d_next_o_id) " +
+                "VALUES (?, ?, ?, " +
+                "?, ?, ?, ?, ?, " +
+                "?, ?, ?)"
+          stmt = @con.prepareStatement(sql)
+          stmt.setInt(1, d_id)
+          stmt.setInt(2, d_w_id)
+          stmt.setString(3, d_name)
+          stmt.setString(4, d_street_1)
+          stmt.setString(5, d_street_2)
+          stmt.setString(6, d_city)
+          stmt.setString(7, d_state)
+          stmt.setString(8, d_zip)
+          stmt.setDouble(9, d_tax)
+          stmt.setDouble(10, d_ytd)
+          stmt.setInt(11, d_next_o_id)
+          stmt.executeUpdate
+        ensure
+          stmt.close if stmt
+        end
       end
 
       @load_district.after_each do
@@ -318,86 +330,89 @@ class TPCCLoad < RTA::Session
   def load_cust
     unless @load_cust
       @load_cust = RTA::Transaction.new("load cust") do
-        c_id = (@loading - 1) % CUST_PER_DIST + 1
-        c_d_id = @d_id
-        c_w_id = @w_id
-        c_first = make_alpha_string(8, 16)
-        c_middle = "OE"
-        if c_id <= 1000
-          c_last = lastname(c_id - 1)
-        else
-          c_last = lastname(nurand(255, 0, 999))
-        end
-        c_street_1, c_street_2, c_city, c_state, c_zip = make_address
-        c_phone = make_number_string(16, 16)
-        # C_CREDIT = "GC". For 10% of the rows, selected at random , C_CREDIT = "BC"
-        unless random_number(1, 10) == 1
-          c_credit = 'G'
-        else
-          c_credit = 'B'
-        end
-        c_credit = c_credit + 'C'
-        c_credit_lim = 50000.00
-        c_discount = random_number(0, 50) / 100.0
-        c_balance = -10.0
-        c_data = make_alpha_string(300, 500)
+        begin
+          stmt = [nil, nil]
+          c_id = (@loading - 1) % CUST_PER_DIST + 1
+          c_d_id = @d_id
+          c_w_id = @w_id
+          c_first = make_alpha_string(8, 16)
+          c_middle = "OE"
+          if c_id <= 1000
+            c_last = lastname(c_id - 1)
+          else
+            c_last = lastname(nurand(255, 0, 999))
+          end
+          c_street_1, c_street_2, c_city, c_state, c_zip = make_address
+          c_phone = make_number_string(16, 16)
+          # C_CREDIT = "GC". For 10% of the rows, selected at random , C_CREDIT = "BC"
+          unless random_number(1, 10) == 1
+            c_credit = 'G'
+          else
+            c_credit = 'B'
+          end
+          c_credit = c_credit + 'C'
+          c_credit_lim = 50000.00
+          c_discount = random_number(0, 50) / 100.0
+          c_balance = -10.0
+          c_data = make_alpha_string(300, 500)
           
-        log.debug("CID: #{c_id}, LST: #{c_last}, P#: #{c_phone}")
+          log.debug("CID: #{c_id}, LST: #{c_last}, P#: #{c_phone}")
 
-        sql = "INSERT INTO customer (c_id, c_d_id, c_w_id, " +
-              "c_first, c_middle, c_last, " +
-              "c_street_1, c_street_2, c_city, c_state, c_zip, " +
-              "c_phone, c_since, c_credit, " +
-              "c_credit_lim, c_discount, c_balance, c_data, " +
-              "c_ytd_payment, c_payment_cnt, c_delivery_cnt) " +
-              "VALUES (?, ?, ?, " +
-              "?, ?, ?, " +
-              "?, ?, ?, ?, ?, " +
-              "?, ?, ?, " +
-              "?, ?, ?, ?, " +
-              "10.0, 1, 0)"
-        stmt = @con.prepareStatement(sql)
-        stmt.setInt(1, c_id)
-        stmt.setInt(2, c_d_id)
-        stmt.setInt(3, c_w_id)
-        stmt.setString(4, c_first)
-        stmt.setString(5, c_middle)
-        stmt.setString(6, c_last)
-        stmt.setString(7, c_street_1)
-        stmt.setString(8, c_street_2)
-        stmt.setString(9, c_city)
-        stmt.setString(10, c_state)
-        stmt.setString(11, c_zip)
-        stmt.setString(12, c_phone)
-        stmt.setDate(13, @@timestamp)
-        stmt.setString(14, c_credit)
-        stmt.setDouble(15, c_credit_lim)
-        stmt.setDouble(16, c_discount)
-        stmt.setDouble(17, c_balance)
-        stmt.setString(18, c_data)
-        stmt.executeUpdate
-        stmt.close
+          sql = "INSERT INTO customer (c_id, c_d_id, c_w_id, " +
+                "c_first, c_middle, c_last, " +
+                "c_street_1, c_street_2, c_city, c_state, c_zip, " +
+                "c_phone, c_since, c_credit, " +
+                "c_credit_lim, c_discount, c_balance, c_data, " +
+                "c_ytd_payment, c_payment_cnt, c_delivery_cnt) " +
+                "VALUES (?, ?, ?, " +
+                "?, ?, ?, " +
+                "?, ?, ?, ?, ?, " +
+                "?, ?, ?, " +
+                "?, ?, ?, ?, " +
+                "10.0, 1, 0)"
+          stmt[0] = @con.prepareStatement(sql)
+          stmt[0].setInt(1, c_id)
+          stmt[0].setInt(2, c_d_id)
+          stmt[0].setInt(3, c_w_id)
+          stmt[0].setString(4, c_first)
+          stmt[0].setString(5, c_middle)
+          stmt[0].setString(6, c_last)
+          stmt[0].setString(7, c_street_1)
+          stmt[0].setString(8, c_street_2)
+          stmt[0].setString(9, c_city)
+          stmt[0].setString(10, c_state)
+          stmt[0].setString(11, c_zip)
+          stmt[0].setString(12, c_phone)
+          stmt[0].setDate(13, @@timestamp)
+          stmt[0].setString(14, c_credit)
+          stmt[0].setDouble(15, c_credit_lim)
+          stmt[0].setDouble(16, c_discount)
+          stmt[0].setDouble(17, c_balance)
+          stmt[0].setString(18, c_data)
+          stmt[0].executeUpdate
 
-        h_amount = 10.0
-        h_data = make_alpha_string(12, 24)
+          h_amount = 10.0
+          h_data = make_alpha_string(12, 24)
 
-        sql = "INSERT INTO history (h_c_id, h_c_d_id, h_c_w_id, " +
-              "h_w_id, h_d_id, h_date, h_amount, h_data) " +
-              "VALUES (?, ?, ?, " +
-              "?, ?, ?, ?, ?)"
-        stmt = @con.prepareStatement(sql)
-        stmt.setInt(1, c_id)
-        stmt.setInt(2, c_d_id)
-        stmt.setInt(3, c_w_id)
-        stmt.setInt(4, c_w_id)
-        stmt.setInt(5, c_d_id)
-        stmt.setDate(6, @@timestamp)
-        stmt.setDouble(7, h_amount)
-        stmt.setString(8, h_data)
-        stmt.executeUpdate
-        stmt.close
+          sql = "INSERT INTO history (h_c_id, h_c_d_id, h_c_w_id, " +
+                "h_w_id, h_d_id, h_date, h_amount, h_data) " +
+                "VALUES (?, ?, ?, " +
+                "?, ?, ?, ?, ?)"
+          stmt[1] = @con.prepareStatement(sql)
+          stmt[1].setInt(1, c_id)
+          stmt[1].setInt(2, c_d_id)
+          stmt[1].setInt(3, c_w_id)
+          stmt[1].setInt(4, c_w_id)
+          stmt[1].setInt(5, c_d_id)
+          stmt[1].setDate(6, @@timestamp)
+          stmt[1].setDouble(7, h_amount)
+          stmt[1].setString(8, h_data)
+          stmt[1].executeUpdate
 
-        log.info(c_id.to_s) if c_id % 1000 == 0
+          log.info(c_id.to_s) if c_id % 1000 == 0
+        ensure
+          stmt.each { |s| s.close if s }
+        end
       end
 
       @load_cust.after_each do
@@ -417,115 +432,115 @@ class TPCCLoad < RTA::Session
   def load_ord
     unless @load_ord
       @load_ord = RTA::Transaction.new("load ord") do
-        o_d_id = @d_id
-        o_w_id = @w_id
-        o_id = (@loading - 1) % ORD_PER_DIST + 1
-        o_c_id = get_permutation
-        o_carrier_id = random_number(1, 10)
-        o_ol_cnt = random_number(5, 15)
+        begin
+          stmt = [nil, nil, nil, nil, nil]
+          o_d_id = @d_id
+          o_w_id = @w_id
+          o_id = (@loading - 1) % ORD_PER_DIST + 1
+          o_c_id = get_permutation
+          o_carrier_id = random_number(1, 10)
+          o_ol_cnt = random_number(5, 15)
 
-        log.debug("OID: #{o_id}, CID: #{o_c_id}, DID: #{o_d_id}, WID: #{o_w_id}")
+          log.debug("OID: #{o_id}, CID: #{o_c_id}, DID: #{o_d_id}, WID: #{o_w_id}")
 
-        if o_id > 2100 # the last 900 orders have not been delivered
-          sql = "INSERT INTO orders (o_id, o_c_id, o_d_id, o_w_id, " +
-                "o_entry_d, o_carrier_id, o_ol_cnt, o_all_local) " +
-                "VALUES (?, ?, ?, ?, " +
-                "?, NULL, ?, 1)"
-          stmt = @con.prepareStatement(sql)
-          stmt.setInt(1, o_id)
-          stmt.setInt(2, o_c_id)
-          stmt.setInt(3, o_d_id)
-          stmt.setInt(4, o_w_id)
-          stmt.setDate(5, @@timestamp)
-          stmt.setInt(6, o_ol_cnt)
-          stmt.executeUpdate
-          stmt.close
+          if o_id > 2100 # the last 900 orders have not been delivered
+            sql = "INSERT INTO orders (o_id, o_c_id, o_d_id, o_w_id, " +
+                  "o_entry_d, o_carrier_id, o_ol_cnt, o_all_local) " +
+                  "VALUES (?, ?, ?, ?, " +
+                  "?, NULL, ?, 1)"
+            stmt[0] = @con.prepareStatement(sql)
+            stmt[0].setInt(1, o_id)
+            stmt[0].setInt(2, o_c_id)
+            stmt[0].setInt(3, o_d_id)
+            stmt[0].setInt(4, o_w_id)
+            stmt[0].setDate(5, @@timestamp)
+            stmt[0].setInt(6, o_ol_cnt)
+            stmt[0].executeUpdate
 
-          sql = "INSERT INTO new_order (no_o_id, no_d_id, no_w_id) " +
+            sql = "INSERT INTO new_order (no_o_id, no_d_id, no_w_id) " +
                 "VALUES (?, ?, ?)"
-          stmt = @con.prepareStatement(sql)
-          stmt.setInt(1, o_id)
-          stmt.setInt(2, o_d_id)
-          stmt.setInt(3, o_w_id)
-          stmt.executeUpdate
-          stmt.close
-        else
-          sql = "INSERT INTO orders (o_id, o_c_id, o_d_id, o_w_id, " +
-                "o_entry_d, o_carrier_id, o_ol_cnt, o_all_local) " +
-                "VALUES (?, ?, ?, ?, " +
-                "?, ?, ?, 1)"
-          stmt = @con.prepareStatement(sql)
-          stmt.setInt(1, o_id)
-          stmt.setInt(2, o_c_id)
-          stmt.setInt(3, o_d_id)
-          stmt.setInt(4, o_w_id)
-          stmt.setDate(5, @@timestamp)
-          stmt.setInt(6, o_carrier_id)
-          stmt.setInt(7, o_ol_cnt)
-          stmt.executeUpdate
-          stmt.close
-        end
-
-        1.upto(o_ol_cnt) do |ol|
-          ol_i_id = random_number(1, MAXITEMS)
-          ol_supply_w_id = o_w_id
-          ol_quantity = 5
-          ol_amount = 0.0
-          ol_dist_info = make_alpha_string(24, 24)
-
-          if o_id > 2100
-            # OL_AMOUNT = 0.00 if OL_O_ID < 2,101, random within [0.01 .. 9,999.99] otherwise
-            ol_amount = random_number(1, 999999) / 100.0
-
-            log.debug("OL: #{ol}, IID: #{ol_i_id}, QUAN: #{ol_quantity}, AMT: #{ol_amount}")
-
-            sql = "INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, " +
-                  "ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, " +
-                  "ol_dist_info, ol_delivery_d) " +
-                  "VALUES (?, ?, ?, ?, " +
-                  "?, ?, ?, ?, " +
-                  "?, NULL)"
-            stmt = @con.prepareStatement(sql)
-            stmt.setInt(1, o_id)
-            stmt.setInt(2, o_d_id)
-            stmt.setInt(3, o_w_id)
-            stmt.setInt(4, ol)
-            stmt.setInt(5, ol_i_id)
-            stmt.setInt(6, ol_supply_w_id)
-            stmt.setInt(7, ol_quantity)
-            stmt.setDouble(8, ol_amount)
-            stmt.setString(9, ol_dist_info)
-            stmt.executeUpdate
-            stmt.close
+            stmt[1] = @con.prepareStatement(sql)
+            stmt[1].setInt(1, o_id)
+            stmt[1].setInt(2, o_d_id)
+            stmt[1].setInt(3, o_w_id)
+            stmt[1].executeUpdate
           else
-            # OL_AMOUNT = 0.00 if OL_O_ID < 2,101, random within [0.01 .. 9,999.99] otherwise
-            ol_amount = 0.0
-
-            log.debug("OL: #{ol}, IID: #{ol_i_id}, QUAN: #{ol_quantity}, AMT: #{ol_amount}")
-
-            sql = "INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, " +
-                  "ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, " +
-                  "ol_dist_info, ol_delivery_d) " +
+            sql = "INSERT INTO orders (o_id, o_c_id, o_d_id, o_w_id, " +
+                  "o_entry_d, o_carrier_id, o_ol_cnt, o_all_local) " +
                   "VALUES (?, ?, ?, ?, " +
-                  "?, ?, ?, ?, " +
-                  "?, ?)"
-            stmt = @con.prepareStatement(sql)
-            stmt.setInt(1, o_id)
-            stmt.setInt(2, o_d_id)
-            stmt.setInt(3, o_w_id)
-            stmt.setInt(4, ol)
-            stmt.setInt(5, ol_i_id)
-            stmt.setInt(6, ol_supply_w_id)
-            stmt.setInt(7, ol_quantity)
-            stmt.setDouble(8, ol_amount)
-            stmt.setString(9, ol_dist_info)
-            stmt.setDate(10, @@timestamp)
-            stmt.executeUpdate
-            stmt.close
+                  "?, ?, ?, 1)"
+            stmt[2] = @con.prepareStatement(sql)
+            stmt[2].setInt(1, o_id)
+            stmt[2].setInt(2, o_c_id)
+            stmt[2].setInt(3, o_d_id)
+            stmt[2].setInt(4, o_w_id)
+            stmt[2].setDate(5, @@timestamp)
+            stmt[2].setInt(6, o_carrier_id)
+            stmt[2].setInt(7, o_ol_cnt)
+            stmt[2].executeUpdate
           end
-        end
 
-        log.info(o_id.to_s) if o_id % 1000 == 0
+          1.upto(o_ol_cnt) do |ol|
+            ol_i_id = random_number(1, MAXITEMS)
+            ol_supply_w_id = o_w_id
+            ol_quantity = 5
+            ol_amount = 0.0
+            ol_dist_info = make_alpha_string(24, 24)
+
+            if o_id > 2100
+              # OL_AMOUNT = 0.00 if OL_O_ID < 2,101, random within [0.01 .. 9,999.99] otherwise
+              ol_amount = random_number(1, 999999) / 100.0
+
+              log.debug("OL: #{ol}, IID: #{ol_i_id}, QUAN: #{ol_quantity}, AMT: #{ol_amount}")
+
+              sql = "INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, " +
+                    "ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, " +
+                    "ol_dist_info, ol_delivery_d) " +
+                    "VALUES (?, ?, ?, ?, " +
+                    "?, ?, ?, ?, " +
+                    "?, NULL)"
+              stmt[3] ||= @con.prepareStatement(sql)
+              stmt[3].setInt(1, o_id)
+              stmt[3].setInt(2, o_d_id)
+              stmt[3].setInt(3, o_w_id)
+              stmt[3].setInt(4, ol)
+              stmt[3].setInt(5, ol_i_id)
+              stmt[3].setInt(6, ol_supply_w_id)
+              stmt[3].setInt(7, ol_quantity)
+              stmt[3].setDouble(8, ol_amount)
+              stmt[3].setString(9, ol_dist_info)
+              stmt[3].executeUpdate
+            else
+              # OL_AMOUNT = 0.00 if OL_O_ID < 2,101, random within [0.01 .. 9,999.99] otherwise
+              ol_amount = 0.0
+
+              log.debug("OL: #{ol}, IID: #{ol_i_id}, QUAN: #{ol_quantity}, AMT: #{ol_amount}")
+
+              sql = "INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, " +
+                    "ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, " +
+                    "ol_dist_info, ol_delivery_d) " +
+                    "VALUES (?, ?, ?, ?, " +
+                    "?, ?, ?, ?, " +
+                    "?, ?)"
+              stmt[4] ||= @con.prepareStatement(sql)
+              stmt[4].setInt(1, o_id)
+              stmt[4].setInt(2, o_d_id)
+              stmt[4].setInt(3, o_w_id)
+              stmt[4].setInt(4, ol)
+              stmt[4].setInt(5, ol_i_id)
+              stmt[4].setInt(6, ol_supply_w_id)
+              stmt[4].setInt(7, ol_quantity)
+              stmt[4].setDouble(8, ol_amount)
+              stmt[4].setString(9, ol_dist_info)
+              stmt[4].setDate(10, @@timestamp)
+              stmt[4].executeUpdate
+            end
+          end
+
+          log.info(o_id.to_s) if o_id % 1000 == 0
+        ensure
+          stmt.each { |s| s.close if s }
+        end
       end
 
       @load_ord.after_each do

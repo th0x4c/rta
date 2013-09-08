@@ -19,21 +19,27 @@ class ExampleSession < RTA::Session
 
     # トランザクション
     @tx1 = RTA::Transaction.new("tx1") do
-      stmt = @con.prepareStatement("select ename, comm from emp where empno = 7900")
-      rset = stmt.executeQuery
-      while rset.next
-        log.info("sid: #{@session_id} " + rset.getString(1) + " " + rset.getInt(2).to_s)
+      begin
+        stmt = @con.prepareStatement("select ename, comm from emp where empno = 7900")
+        rset = stmt.executeQuery
+        while rset.next
+          log.info("sid: #{@session_id} " + rset.getString(1) + " " + rset.getInt(2).to_s)
+        end
+      ensure
+        rset.close if rset
+        stmt.close if stmt
       end
-      rset.close
-      stmt.close
     end
     @tx1.after { sleep 1 }
 
     @tx2 = RTA::Transaction.new("tx2") do
-      stmt = @con.createStatement
-      stmt.executeUpdate("update emp set comm = #{@session_id} where empno = 7900")
-      @con.commit
-      stmt.close
+      begin
+        stmt = @con.createStatement
+        stmt.executeUpdate("update emp set comm = #{@session_id} where empno = 7900")
+        @con.commit
+      ensure
+        stmt.close if stmt
+      end
     end
     @tx2.after { sleep 0.5 }
     @tx2.whenever_sqlerror { @con.rollback }

@@ -25,3 +25,5 @@ think_time: # Think Time (in seconds)
   Order-Status: 10.00
   Delivery:      5.00
   Stock-Level:   5.00
+
+prepare_statement: true

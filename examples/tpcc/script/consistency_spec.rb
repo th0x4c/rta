@@ -22,9 +22,9 @@ describe "TPC-C Consistency Requirements" do
                config["tpcc_user"], config["tpcc_password"])
       @con.setAutoCommit(false)
     rescue SQLException => e
-      e.cause.printStackTrace
+      e.printStackTrace
     rescue ClassNotFoundException => e
-      e.cause.printStackTrace
+      e.printStackTrace
     end
   end
 

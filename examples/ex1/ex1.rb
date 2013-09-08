@@ -12,9 +12,9 @@ class ExampleSession < RTA::Session
       @con = DriverManager.getConnection(url, user, passwd)
       @con.setAutoCommit(false)
     rescue SQLException => e
-      e.cause.printStackTrace
+      e.printStackTrace
     rescue ClassNotFoundException => e
-      e.cause.printStackTrace
+      e.printStackTrace
     end
 
     # トランザクション

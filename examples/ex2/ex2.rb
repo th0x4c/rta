@@ -20,9 +20,9 @@ class ConnectionPool
       p1.put(OracleOCIConnectionPool.CONNPOOL_INCREMENT, "1")
       @cpool.setPoolConfig(p1)
     rescue SQLException => e
-      e.cause.printStackTrace
+      e.printStackTrace
     rescue ClassNotFoundException => e
-      e.cause.printStackTrace
+      e.printStackTrace
     end
   end
 

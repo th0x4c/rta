@@ -13,10 +13,10 @@ class TPCC < RTA::Session
   UNUSED_I_ID = -1
 
   INVALID_ITEM_ERROR_CODE = -1
-  INVALID_ITEM_SQL_EXCEPTION = SQLException.new.initCause(SQLException.new("Item number is not valid", nil, INVALID_ITEM_ERROR_CODE))
+  INVALID_ITEM_SQL_EXCEPTION = SQLException.new("Item number is not valid", nil, INVALID_ITEM_ERROR_CODE)
 
   NOT_FOUND_ERROR_CODE = -2
-  NOT_FOUND_SQL_EXCEPTION = SQLException.new.initCause(SQLException.new("Not found", nil, NOT_FOUND_ERROR_CODE))
+  NOT_FOUND_SQL_EXCEPTION = SQLException.new("Not found", nil, NOT_FOUND_ERROR_CODE)
 
   @@time_str = Time.now.strftime("%Y%m%d%H%M%S")
 
@@ -78,9 +78,9 @@ class TPCC < RTA::Session
                config["tpcc_user"], config["tpcc_password"])
       @con.setAutoCommit(false)
     rescue SQLException => e
-      e.cause.printStackTrace
+      e.printStackTrace
     rescue ClassNotFoundException => e
-      e.cause.printStackTrace
+      e.printStackTrace
     end
 
     # Transaction

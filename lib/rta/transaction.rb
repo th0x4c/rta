@@ -284,8 +284,8 @@ module RTA
         begin
           @transaction.call
         rescue SQLException => e
-          @statistic.sql_exception = e.cause
-          @whenever_sqlerror.call(e.cause) if @whenever_sqlerror
+          @statistic.sql_exception = e
+          @whenever_sqlerror.call(e) if @whenever_sqlerror
         end
       end
       @statistics[:after].start { @after_each.call } if @after_each

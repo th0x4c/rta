@@ -15,9 +15,9 @@ class ConnectionPool
       passwd = "tiger"
       @cpool = OracleOCIConnectionPool.new(user, passwd, url, nil)
       p1 = Properties.new
-      p1.put(OracleOCIConnectionPool.CONNPOOL_MIN_LIMIT, "1")
-      p1.put(OracleOCIConnectionPool.CONNPOOL_MAX_LIMIT, "3")
-      p1.put(OracleOCIConnectionPool.CONNPOOL_INCREMENT, "1")
+      p1.put(OracleOCIConnectionPool::CONNPOOL_MIN_LIMIT, "1")
+      p1.put(OracleOCIConnectionPool::CONNPOOL_MAX_LIMIT, "3")
+      p1.put(OracleOCIConnectionPool::CONNPOOL_INCREMENT, "1")
       @cpool.setPoolConfig(p1)
     rescue SQLException => e
       e.printStackTrace

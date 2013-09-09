@@ -850,11 +850,17 @@ class TPCC < RTA::Session
           # order number, is retrieved. If no matching row is found, then the
           # delivery of an order for this district is skipped.
           stmt[0] ||=
-            @con.prepareStatement("SELECT MIN(no_o_id) " +
+            @con.prepareStatement("SELECT no_o_id " +
                                   "FROM new_order " +
-                                  "WHERE no_d_id = ? AND no_w_id = ?")
+                                  "WHERE no_d_id = ? AND no_w_id = ? AND " +
+                                  "  no_o_id = (SELECT MIN(no_o_id) " +
+                                  "             FROM new_order " +
+                                  "             WHERE no_d_id = ? AND no_w_id = ?) " +
+                                  "FOR UPDATE")
           stmt[0].setInt(1, d_id)
           stmt[0].setInt(2, @input[:w_id])
+          stmt[0].setInt(3, d_id)
+          stmt[0].setInt(4, @input[:w_id])
           c_no = stmt[0].executeQuery
           rownum = 0
           nullrow = true

@@ -143,4 +143,8 @@ class TPCB < RTA::Session
     @insert_history_stmt.close
     @con.close
   end
+
+  def teardown_last
+    self.log.info(numerical_quantities_summary)
+  end
 end

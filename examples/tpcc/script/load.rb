@@ -2,7 +2,6 @@
 require 'yaml'
 require 'thread'
 require 'java'
-import java.sql.Date
 import java.sql.DriverManager
 import Java::oracle.jdbc.driver.OracleDriver
 

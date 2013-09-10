@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Usage: jruby -S spec -c -fs consistency_spec.rb
+# Usage: jruby -S rspec -c -fs consistency_spec.rb
 
 require File.dirname(__FILE__) + '/../script/helper'
 require 'java'

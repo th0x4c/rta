@@ -66,7 +66,7 @@ script/consistency_spec.rb で Standard Specification の
 
 config/config.yml を環境に合わせて変更後に JRuby の RSpec から実行
 
-  $ jruby -S spec -c -fs script/consistency_spec.rb
+  $ jruby -S rspec -c -fs script/consistency_spec.rb
 
 == Author
 Takashi Hashizume

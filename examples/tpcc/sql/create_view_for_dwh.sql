@@ -16,7 +16,7 @@ CREATE OR REPLACE VIEW district_dim AS
   SELECT '1' total_district_id,
          'Total District' total_district_dsc,
          TO_CHAR(d_w_id) warehouse_id,
-         'W:' || TO_CHAR(d_w_id) || '|' || w_name wareshoue_dsc,
+         'W:' || TO_CHAR(d_w_id) || '|' || w_name warehouse_dsc,
          TO_CHAR(d_w_id * 100 + d_id) district_id,
          'W:' || TO_CHAR(d_w_id) || '|' || 'D:' || TO_CHAR(d_id) || '|' || d_name district_dsc
   FROM warehouse, district

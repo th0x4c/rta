@@ -1,3 +1,6 @@
+$:.unshift(File.dirname(__FILE__) + '/lib')
+require 'rta/version'
+
 SPEC = Gem::Specification.new do |s|
   s.name          = "rta"
   s.summary       = "Database transaction application generation tool in JRuby."
@@ -6,7 +9,7 @@ SPEC = Gem::Specification.new do |s|
     It enables the user to generate transaction processing application that is
     written in JRuby and JDBC.
   EOF
-  s.version       = "0.3.8"
+  s.version       = RTA::VERSION
   s.author        = "Takashi Hashizume"
   s.email         = "th0x4c@gmail.com"
   s.files         = Dir.glob("{bin,lib,spec,examples}/**/*") + ['README', 'Rakefile']

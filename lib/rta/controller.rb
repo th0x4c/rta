@@ -12,8 +12,10 @@ module RTA
 
     # バナー出力
     BANNER = "Usage: rtactl [options] <command> [<file>]\n\n" +
-             "Example: rtactl -p 9000 -n 5 start example.rb\n" +
+             "Example: rtactl -p 9000 -n 5 -M 7200 -U 1200 -D 600 start example.rb\n" +
+             "         rtactl -p 9000 -n 5 start example.rb\n" +
              "         rtactl -p 9000 go\n" +
+             "         rtactl -p 9000 -M 600 -U 30 -D 20 go\n" +
              "         rtactl -p 9000 -s 3,4 standby\n" +
              "         rtactl -p 9000 console\n" +
              "         rtactl -p 9000 stop\n\n" +
@@ -23,6 +25,9 @@ module RTA
     OPTIONS = {
       :port => ['-p', '--port=NUMBER', Numeric, 'specify port number'],
       :numses => ['-n', '--number=NUMBER', Numeric, 'specify number of sessions'],
+      :measurement => ['-M', '--measurement=NUMBER', Numeric, 'Measurement interval (in sec)'],
+      :rampup => ['-U', '--ramp-up=NUMBER', Numeric, 'Ramp-up time (in sec)'],
+      :rampdown => ['-D', '--ramp-down=NUMBER', Numeric, 'Ramp-down time (in sec)'],
       :sids => ['-s', '--sid=SID_LIST', Array, 'specify session IDs (CSV)'],
       :help => ['-h', 'output help']
     }
@@ -41,6 +46,10 @@ module RTA
       # @return [Number]
       attr_accessor :numses
 
+      attr_accessor :measurement
+      attr_accessor :rampup
+      attr_accessor :rampdown
+
       # 実行するコマンド
       # @return [String]
       attr_reader :command
@@ -52,6 +61,8 @@ module RTA
       # Option インスタンスを生成
       def initialize
         @numses = 1
+        @rampup = 0
+        @rampdown = 0
       end
 
       # 引数を解析
@@ -65,6 +76,9 @@ module RTA
           op.on(*OPTIONS[:port]) { |arg| @port = arg }
           op.on(*OPTIONS[:numses]) { |arg| @numses = arg }
           op.on(*OPTIONS[:sids]) { |arg| @sids = arg.map { |sid| sid.to_i } }
+          op.on(*OPTIONS[:measurement]) { |arg| @measurement = arg }
+          op.on(*OPTIONS[:rampup]) { |arg| @rampup = arg }
+          op.on(*OPTIONS[:rampdown]) { |arg| @rampdown = arg }
           op.on(*OPTIONS[:help]) { STDOUT.puts op.help; exit 0 }
           op.parse!(argv)
 
@@ -74,6 +88,7 @@ module RTA
           if argv[0] == "start" && (argv[1].nil? || (! FileTest.exist?(argv[1])))
             raise "Missing file: #{argv[1]}"
           end
+          raise "Missing measurement interval" if @measurement.nil? && (@rampup > 0 || @rampdown > 0)
 
           @command = argv[0]
           @filename = argv[1]
@@ -113,6 +128,9 @@ module RTA
           when "standby"
             sm.standby(opt.sids)
           when "go"
+            if opt.measurement
+              sm.period_target(Time.now, opt.rampup, opt.measurement, opt.rampdown)
+            end
             sm.go(opt.sids)
           when "stop"
             sm.stop(opt.sids)
@@ -139,6 +157,10 @@ module RTA
         session_class ||= RTA::Session
 
         sm = RTA::SessionManager.new(opt.numses, session_class)
+        if opt.measurement
+          sm.period_target(Time.now, opt.rampup, opt.measurement, opt.rampdown)
+          sm.go(opt.sids)
+        end
         sm.run
         sm.start_service(opt.port)
       end

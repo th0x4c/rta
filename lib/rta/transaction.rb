@@ -263,6 +263,8 @@ module RTA
                                 :error_count, :sql_exception,
                                 :avg_elapsed_time, :tps, :to_s
 
+    attr_accessor :period
+
     # トランザクションを生成
     #
     # @param [String] name トランザクション名
@@ -270,25 +272,36 @@ module RTA
     # @return [Transaction]
     def initialize(name = "", &block)
       @statistic = TransactionStatistic.new(name)
-      @statistics = {:before => TransactionStatistic.new("BEFORE " + name),
-                     :tx => @statistic,
-                     :after => TransactionStatistic.new("AFTER " + name)}
+      @statistics =
+        {:rampup =>
+           {:before => TransactionStatistic.new("RUMP-UP BEFORE " + name),
+            :tx     => TransactionStatistic.new("RAMP-UP " + name),
+            :after  => TransactionStatistic.new("RAMP-UP AFTER " + name)},
+         :measurement =>
+           {:before => TransactionStatistic.new("BEFORE " + name),
+            :tx     => @statistic,
+            :after  => TransactionStatistic.new("AFTER " + name)},
+         :rampdown =>
+           {:before => TransactionStatistic.new("RUMP-DOWN BEFORE " + name),
+            :tx     => TransactionStatistic.new("RAMP-DOWN " + name),
+            :after  => TransactionStatistic.new("RUMP-DOWN AFTER " + name)}}
       @transaction = block
+      @period = :measurement
     end
 
     # トランザクションを実行
     def execute
       @before_all.call if @before_all && @statistic.count == 0
-      @statistics[:before].start { @before_each.call } if @before_each
-      @statistic.start do
+      @statistics[@period][:before].start { @before_each.call } if @before_each
+      @statistics[@period][:tx].start do
         begin
           @transaction.call
         rescue SQLException => e
-          @statistic.sql_exception = e
+          @statistics[@period][:tx].sql_exception = e
           @whenever_sqlerror.call(e) if @whenever_sqlerror
         end
       end
-      @statistics[:after].start { @after_each.call } if @after_each
+      @statistics[@period][:after].start { @after_each.call } if @after_each
     end
 
     # 初回トランザクション実行前に1度だけ実行される処理を登録
@@ -315,10 +328,11 @@ module RTA
 
     # 指定されたフェーズの {TransactionStatistic} を返す.
     #
-    # @param [Symbol] phase フェーズ, `:before` または `:tx` または `:after`
+    # @param [Symbol] phs フェーズ, `:before` または `:tx` または `:after`
+    # @param [Symbol] prd ピリオド, `:rampup` または `:measurement` または`:rampdown`
     # @return [TransactionStatistic]
-    def statistic(phase = :tx)
-      return @statistics[phase]
+    def statistic(phs = :tx, prd = :measurement)
+      return @statistics[prd][phs]
     end
     alias_method :stat, :statistic
   end

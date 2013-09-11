@@ -40,8 +40,11 @@ module RTA
       stats = tx_names.map { |name| stat_by_name(name, sess) }
       before_stats = tx_names.map { |name| stat_by_name(name, sess, :before) }
       after_stats = tx_names.map { |name| stat_by_name(name, sess, :after) }
-      all_stat = stats.inject { |result, st| result += st }
 
+      rampup_stats = tx_names.map { |name| stat_by_name(name, sess, :tx, :rampup) }
+      rampdown_stats = tx_names.map { |name| stat_by_name(name, sess, :tx, :rampdown) }
+
+      all_stat = stats.inject { |result, st| result += st }
       return "" if all_stat.first_time.nil? || all_stat.end_time.nil?
 
       measurement_interval = all_stat.end_time - all_stat.first_time
@@ -100,13 +103,32 @@ module RTA
       end
       dr << ""
 
+
+      all_rampup_stat = rampup_stats.inject { |result, st| result += st }
+      all_rampdown_stat = rampdown_stats.inject { |result, st| result += st }
+      rampup_interval = all_rampup_stat.first_time.nil? ?
+                        0 : all_stat.first_time - all_rampup_stat.first_time
+      rampdown_interval = all_rampdown_stat.end_time.nil? ?
+                        0 : all_rampdown_stat.end_time - all_stat.end_time
+
       dr << "Test Duration"
-      dr << sprintf("  - Ramp-up time %39.3f seconds", 0.0)
+      dr << sprintf("  - Ramp-up time %39.3f seconds", rampup_interval)
+      if rampup_interval > 0
+        dr << sprintf("             (%23s / %23s)",
+                      all_rampup_stat.first_time.strftime("%Y-%m-%d %X.%3N"),
+                      all_stat.first_time.strftime("%Y-%m-%d %X.%3N"))
+      end
       dr << sprintf("  - Measurement interval %31.3f seconds",
                     measurement_interval)
       dr << sprintf("             (%23s / %23s)",
                     all_stat.first_time.strftime("%Y-%m-%d %X.%3N"),
                     all_stat.end_time.strftime("%Y-%m-%d %X.%3N"))
+      dr << sprintf("  - Ramp-down time %37.3f seconds", rampdown_interval)
+      if rampdown_interval > 0
+        dr << sprintf("             (%23s / %23s)",
+                      all_stat.end_time.strftime("%Y-%m-%d %X.%3N"),
+                      all_rampdown_stat.end_time.strftime("%Y-%m-%d %X.%3N"))
+      end
       dr << "  - Number of transactions (all types)"
       dr << sprintf("    completed in measurement interval %26d",
                     all_stat.count)
@@ -120,11 +142,13 @@ module RTA
     #
     # @param [String] name {Transaction} 名
     # @param [Array<Session>] sess {Session} の配列
+    # @param [Symbol] phase フェーズ, `:before` または `:tx` または `:after`
+    # @param [Symbol] period ピリオド, `:rampup` または `:measurement` または`:rampdown
     # @return [TransactionStatistic]
-    def stat_by_name(name, sess = sessions, phase = :tx)
+    def stat_by_name(name, sess = sessions, phase = :tx, period = :measurement)
       ts = RTA::TransactionStatistic.new
       sess.each do |ses|
-        ts += ses.transactions.find { |tx| tx.name == name }.stat(phase)
+        ts += ses.transactions.find { |tx| tx.name == name }.stat(phase, period)
       end
       ts.name = name
       return ts
@@ -166,6 +190,10 @@ module RTA
     # @see STOP
     attr_reader :status
 
+    # ピリオド
+    # @return [Symbol]
+    attr_reader :period
+
     # ログ
     # @return [Log]
     # @see Log
@@ -179,6 +207,7 @@ module RTA
     def initialize(sid, log = RTA::Log.new)
       @session_id = sid
       @status = STANDBY
+      @period = :measurement
       @log = log
       @@semaphore.synchronize do
         @@sessions[sid - 1] = self
@@ -201,6 +230,8 @@ module RTA
       standby_msg = false
       start_msg = false
       while @status == GO || @status == STANDBY
+        check_period
+
         case @status
         when STANDBY
           unless standby_msg
@@ -303,7 +334,39 @@ module RTA
       return @@sessions
     end
 
+    # Ramp-up, Measurement, Ramp-down といったピリオドの期間を設定する.
+    #
+    # @param [Time] start_time ピリオドの開始起点となる時刻
+    # @param [Number] rampup_interval Ramp-up 期間(秒)
+    # @param [Number] measurement_interval Measurement 期間(秒)
+    # @param [Number] rampdown_interval Ramp-up 期間(秒)
+    def period_target(start_time, rampup_interval, measurement_interval,
+                      rampdown_interval)
+      @end_target = Hash.new
+      @end_target[:rampup] = start_time + rampup_interval
+      @end_target[:measurement] = @end_target[:rampup] + measurement_interval
+      @end_target[:rampdown] = @end_target[:measurement] + rampdown_interval
+    end
+
     private
+    # 現在時刻からピリオドを導出して保持しているトランザクションに設定.
+    def check_period
+      return unless @end_target
+
+      now = Time.now
+      prd = [:rampup, :measurement, :rampdown].find { |p| now < @end_target[p] }
+      if prd.nil?
+        stop
+        prd  = @period
+      end
+
+      if prd != @period
+        transactions.each { |tx| tx.period = prd }
+        @log.info("sid: #{@session_id}, period: #{prd.to_s}")
+        @period = prd
+      end
+    end
+
     # すべての {Session} インスタンス中で最初のセッション開始時に1度だけ
     # 実行される処理.
     # 継承したクラスで実装.
@@ -477,6 +540,20 @@ module RTA
     # @return [String]
     def stat_name
       return "All SID TXs"
+    end
+
+    # すべてのセッションに Ramp-up, Measurement, Ramp-down といったピリオドの期間を設定する.
+    #
+    # @param [Time] start_time ピリオドの開始起点となる時刻
+    # @param [Number] rampup_interval Ramp-up 期間(秒)
+    # @param [Number] measurement_interval Measurement 期間(秒)
+    # @param [Number] rampdown_interval Ramp-up 期間(秒)
+    def period_target(start_time, rampup_interval, measurement_interval,
+                      rampdown_interval)
+      @sessions.each do |ses|
+        ses.period_target(start_time, rampup_interval, measurement_interval,
+                          rampdown_interval)
+      end
     end
   end
 end

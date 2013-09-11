@@ -19,6 +19,15 @@ rtactl [options] <command> [<file>]
 -n | --number ::
    Specify number of sessions.
 
+-M | --measurement ::
+   Measurement interval (in seconds)
+
+-U | --ramp-up ::
+   Ramp-up time (in seconds)
+
+-D | --ramp-down ::
+   Ramp-down time (in seconds)
+
 -s | --sid ::
    Specify session IDs (comma-delimited list).
 
@@ -37,6 +46,8 @@ rtactl [options] <command> [<file>]
     rtactl -p 9000 console
 * Stop RTA
     rtactl -p 9000 stop
+* Start RTA with measurement interval 600s, ramp-up 30s and ramp-down 20s
+    rtactl -p 9000 -M 600 -U 30 -D 20 start example.rb
 
 == Author
 Takashi Hashizume

@@ -48,7 +48,7 @@ module RTA
       return "" if all_stat.first_time.nil? || all_stat.end_time.nil?
 
       measurement_interval = all_stat.end_time - all_stat.first_time
-      tpmc = measurement_interval == 0 ?
+      tpm = measurement_interval == 0 ?
              0 : stats[0].count * 60 / measurement_interval
 
       dr = Array.new
@@ -57,7 +57,7 @@ module RTA
       dr << "================================================================"
 
       dr << sprintf("MQTh, computed Maximum Qualified Throughput %16.2f tpm",
-                    tpmc)
+                    tpm)
       stats.each do |st|
         dr << sprintf("  - %-39s %16.2f tps", st.name, st.tps)
       end

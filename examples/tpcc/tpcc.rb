@@ -3,7 +3,7 @@ require 'yaml'
 require 'thread'
 import java.sql.Timestamp
 import java.sql.DriverManager
-import Java::oracle.jdbc.driver.OracleDriver
+import Java::oracle.jdbc.pool.OracleDataSource
 
 require File.dirname(__FILE__) + '/script/helper'
 
@@ -75,8 +75,11 @@ class TPCC < RTA::Session
 
     # 接続
     begin
-      @con = DriverManager.getConnection(config["tpcc_url"],
-               config["tpcc_user"], config["tpcc_password"])
+      @ds = OracleDataSource.new
+      @ds.setURL(config["tpcc_url"])
+      @ds.setUser(config["tpcc_user"])
+      @ds.setPassword(config["tpcc_password"])
+      @con = @ds.getConnection
       @con.setAutoCommit(false)
     rescue SQLException => e
       e.printStackTrace

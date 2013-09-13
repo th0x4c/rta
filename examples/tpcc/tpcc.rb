@@ -71,6 +71,7 @@ class TPCC < RTA::Session
     @tx_percentage.each { |key, value| @tx_percentage[key] = (value / sum.to_f) * 100 }
     @keying_time = config["keying_time"]
     @think_time = config["think_time"]
+    @get_connection_everytime = config["get_connection_everytime"]
     @statement_cache_size = config["statement_cache_size"]
 
     # 接続
@@ -82,7 +83,7 @@ class TPCC < RTA::Session
       if @statement_cache_size > 0
         @ds.setImplicitCachingEnabled(true)
       end
-      get_connection
+      get_connection unless @get_connection_everytime
     rescue SQLException => e
       e.printStackTrace
     rescue ClassNotFoundException => e
@@ -113,7 +114,7 @@ class TPCC < RTA::Session
   end
 
   def teardown
-    @con.close
+    close_connection
   end
 
   def teardown_last
@@ -132,6 +133,7 @@ class TPCC < RTA::Session
       begin
         datetime = java.sql.Timestamp.new(Time.now.to_f * 1000)
         stmt = Array.new
+        get_connection if @get_connection_everytime
 
         stmt[0] ||=
           @con.prepareStatement("SELECT c_discount, c_last, c_credit, w_tax " +
@@ -318,10 +320,11 @@ class TPCC < RTA::Session
 
         @con.commit
       rescue SQLException => e
-        @con.rollback
+        @con.rollback if @con && (! @con.isClosed)
         raise e
       ensure
         stmt.each { |s| s.close if s }
+        close_connection if @get_connection_everytime
       end
     end
 
@@ -389,6 +392,7 @@ class TPCC < RTA::Session
       begin
         datetime = java.sql.Timestamp.new(Time.now.to_f * 1000)
         stmt = Array.new
+        get_connection if @get_connection_everytime
 
         stmt[0] ||=
           @con.prepareStatement("UPDATE warehouse SET w_ytd = w_ytd + ? " +
@@ -609,10 +613,11 @@ class TPCC < RTA::Session
 
         @con.commit
       rescue SQLException => e
-        @con.rollback
+        @con.rollback if @con && (! @con.isClosed)
         raise e
       ensure
         stmt.each { |s| s.close if s }
+        close_connection if @get_connection_everytime
       end
     end
 
@@ -674,6 +679,7 @@ class TPCC < RTA::Session
     tx = RTA::Transaction.new("Order-Status") do
       begin
         stmt = Array.new
+        get_connection if @get_connection_everytime
 
         c_id = @input[:c_id]
         if @input[:byname]
@@ -785,10 +791,11 @@ class TPCC < RTA::Session
         # satisfied (see Clause 3).
         # @con.commit
       # rescue SQLException => e
-      #   @con.rollback
+      #   @con.rollback if @con && (! @con.isClosed)
       #   raise e
       ensure
         stmt.each { |s| s.close if s }
+        close_connection if @get_connection_everytime
       end
     end
 
@@ -830,6 +837,7 @@ class TPCC < RTA::Session
       begin
         datetime = java.sql.Timestamp.new(Time.now.to_f * 1000)
         stmt = Array.new
+        get_connection if @get_connection_everytime
 
         # Upon completion of the business transaction, the following information
         # must have been recorded into a result file:
@@ -955,10 +963,11 @@ class TPCC < RTA::Session
 
         @con.commit
       rescue SQLException => e
-        @con.rollback
+        @con.rollback if @con && (! @con.isClosed)
         raise e
       ensure
         stmt.each { |s| s.close if s }
+        close_connection if @get_connection_everytime
       end
     end
 
@@ -984,6 +993,7 @@ class TPCC < RTA::Session
     tx = RTA::Transaction.new("Stock-Level") do
       begin
         stmt = Array.new
+        get_connection if @get_connection_everytime
 
         stmt[0] ||=
           @con.prepareStatement("SELECT d_next_o_id FROM district " +
@@ -1019,10 +1029,11 @@ class TPCC < RTA::Session
 
         @con.commit
       rescue SQLException => e
-        @con.rollback
+        @con.rollback if @con && (! @con.isClosed)
         raise e
       ensure
         stmt.each { |s| s.close if s }
+        close_connection if @get_connection_everytime
       end
     end
 
@@ -1067,5 +1078,10 @@ class TPCC < RTA::Session
       @con.setImplicitCachingEnabled(true)
       @con.setStatementCacheSize(@statement_cache_size)
     end
+  end
+
+  def close_connection
+    @con.close if @con
+    @con = nil
   end
 end

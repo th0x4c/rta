@@ -317,6 +317,9 @@ class TPCC < RTA::Session
         end
 
         @con.commit
+      rescue SQLException => e
+        @con.rollback
+        raise e
       ensure
         stmt.each { |s| s.close if s }
       end
@@ -373,7 +376,6 @@ class TPCC < RTA::Session
     tx.after_each { sleep(think_time("New-Order")) }
 
     tx.whenever_sqlerror do |ex|
-      @con.rollback
       log.warn(ex.getMessage.chomp) if ex.getErrorCode == INVALID_ITEM_ERROR_CODE
       log.debug(YAML.dump(@input).chomp)
     end
@@ -606,6 +608,9 @@ class TPCC < RTA::Session
         stmt[10].executeUpdate
 
         @con.commit
+      rescue SQLException => e
+        @con.rollback
+        raise e
       ensure
         stmt.each { |s| s.close if s }
       end
@@ -658,7 +663,6 @@ class TPCC < RTA::Session
     tx.after_each { sleep(think_time("Payment")) }
 
     tx.whenever_sqlerror do
-      @con.rollback
       log.debug(YAML.dump(@input).chomp)
     end
 
@@ -780,6 +784,9 @@ class TPCC < RTA::Session
         # Comment: a commit is not required as long as all ACID properties are
         # satisfied (see Clause 3).
         # @con.commit
+      # rescue SQLException => e
+      #   @con.rollback
+      #   raise e
       ensure
         stmt.each { |s| s.close if s }
       end
@@ -811,7 +818,6 @@ class TPCC < RTA::Session
     tx.after_each { sleep(think_time("Order-Status")) }
 
     tx.whenever_sqlerror do
-      @con.rollback
       log.debug(YAML.dump(@input).chomp)
     end
 
@@ -948,6 +954,9 @@ class TPCC < RTA::Session
         end
 
         @con.commit
+      rescue SQLException => e
+        @con.rollback
+        raise e
       ensure
         stmt.each { |s| s.close if s }
       end
@@ -964,7 +973,6 @@ class TPCC < RTA::Session
     tx.after_each { sleep(think_time("Delivery")) }
 
     tx.whenever_sqlerror do
-      @con.rollback
       log.debug(YAML.dump(@input).chomp)
     end
 
@@ -1010,6 +1018,9 @@ class TPCC < RTA::Session
         rset.close
 
         @con.commit
+      rescue SQLException => e
+        @con.rollback
+        raise e
       ensure
         stmt.each { |s| s.close if s }
       end
@@ -1027,7 +1038,6 @@ class TPCC < RTA::Session
     tx.after_each { sleep(think_time("Stock-Level")) }
 
     tx.whenever_sqlerror do
-      @con.rollback
       log.debug(YAML.dump(@input).chomp)
     end
 

@@ -71,7 +71,7 @@ class TPCC < RTA::Session
     @tx_percentage.each { |key, value| @tx_percentage[key] = (value / sum.to_f) * 100 }
     @keying_time = config["keying_time"]
     @think_time = config["think_time"]
-    @prepare_statement = config["prepare_statement"]
+    @statement_cache_size = config["statement_cache_size"]
 
     # 接続
     begin
@@ -79,8 +79,10 @@ class TPCC < RTA::Session
       @ds.setURL(config["tpcc_url"])
       @ds.setUser(config["tpcc_user"])
       @ds.setPassword(config["tpcc_password"])
-      @con = @ds.getConnection
-      @con.setAutoCommit(false)
+      if @statement_cache_size > 0
+        @ds.setImplicitCachingEnabled(true)
+      end
+      get_connection
     rescue SQLException => e
       e.printStackTrace
     rescue ClassNotFoundException => e
@@ -94,10 +96,6 @@ class TPCC < RTA::Session
     @tx["Order-Status"] = ostat # Order-Status Transaction
     @tx["Delivery"] = delivery  # Delivery Transaction   
     @tx["Stock-Level"] = slev   # Stock-Level Transaction
-
-    @stmts = {"New-Order" => Array.new, "Payment" => Array.new,
-              "Order-Status" => Array.new, "Delivery" => Array.new,
-              "Stock-Level" => Array.new}
   end
 
   def transaction
@@ -133,7 +131,7 @@ class TPCC < RTA::Session
     tx = RTA::Transaction.new("New-Order") do
       begin
         datetime = java.sql.Timestamp.new(Time.now.to_f * 1000)
-        stmt = @stmts["New-Order"]
+        stmt = Array.new
 
         stmt[0] ||=
           @con.prepareStatement("SELECT c_discount, c_last, c_credit, w_tax " +
@@ -320,10 +318,7 @@ class TPCC < RTA::Session
 
         @con.commit
       ensure
-        unless @prepare_statement
-          @stmts["New-Order"].each { |s| s.close if s }
-          @stmts["New-Order"] = Array.new
-        end
+        stmt.each { |s| s.close if s }
       end
     end
 
@@ -391,7 +386,7 @@ class TPCC < RTA::Session
     tx = RTA::Transaction.new("Payment") do
       begin
         datetime = java.sql.Timestamp.new(Time.now.to_f * 1000)
-        stmt = @stmts["Payment"]
+        stmt = Array.new
 
         stmt[0] ||=
           @con.prepareStatement("UPDATE warehouse SET w_ytd = w_ytd + ? " +
@@ -612,10 +607,7 @@ class TPCC < RTA::Session
 
         @con.commit
       ensure
-        unless @prepare_statement
-          @stmts["Payment"].each { |s| s.close if s }
-          @stmts["Payment"] = Array.new
-        end
+        stmt.each { |s| s.close if s }
       end
     end
 
@@ -677,7 +669,7 @@ class TPCC < RTA::Session
   def ostat
     tx = RTA::Transaction.new("Order-Status") do
       begin
-        stmt = @stmts["Order-Status"]
+        stmt = Array.new
 
         c_id = @input[:c_id]
         if @input[:byname]
@@ -789,10 +781,7 @@ class TPCC < RTA::Session
         # satisfied (see Clause 3).
         # @con.commit
       ensure
-        unless @prepare_statement
-          @stmts["Order-Status"].each { |s| s.close if s }
-          @stmts["Order-Status"] = Array.new
-        end
+        stmt.each { |s| s.close if s }
       end
     end
 
@@ -834,7 +823,7 @@ class TPCC < RTA::Session
     tx = RTA::Transaction.new("Delivery") do
       begin
         datetime = java.sql.Timestamp.new(Time.now.to_f * 1000)
-        stmt = @stmts["Delivery"]
+        stmt = Array.new
 
         # Upon completion of the business transaction, the following information
         # must have been recorded into a result file:
@@ -960,10 +949,7 @@ class TPCC < RTA::Session
 
         @con.commit
       ensure
-        unless @prepare_statement
-          @stmts["Delivery"].each { |s| s.close if s }
-          @stmts["Delivery"] = Array.new
-        end
+        stmt.each { |s| s.close if s }
       end
     end
 
@@ -989,7 +975,7 @@ class TPCC < RTA::Session
   def slev
     tx = RTA::Transaction.new("Stock-Level") do
       begin
-        stmt = @stmts["Stock-Level"]
+        stmt = Array.new
 
         stmt[0] ||=
           @con.prepareStatement("SELECT d_next_o_id FROM district " +
@@ -1025,10 +1011,7 @@ class TPCC < RTA::Session
 
         @con.commit
       ensure
-        unless @prepare_statement
-          @stmts["Stock-Level"].each { |s| s.close if s }
-          @stmts["Stock-Level"] = Array.new
-        end
+        stmt.each { |s| s.close if s }
       end
     end
 
@@ -1065,5 +1048,14 @@ class TPCC < RTA::Session
 
   def think_time(tx_name)
     return (- Math.log(rand) * @think_time[tx_name])
+  end
+
+  def get_connection
+    @con = @ds.getConnection
+    @con.setAutoCommit(false)
+    if @statement_cache_size > 0
+      @con.setImplicitCachingEnabled(true)
+      @con.setStatementCacheSize(@statement_cache_size)
+    end
   end
 end

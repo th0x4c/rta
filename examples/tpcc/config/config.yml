@@ -26,4 +26,4 @@ think_time: # Think Time (in seconds)
   Delivery:      5.00
   Stock-Level:   5.00
 
-prepare_statement: true
+statement_cache_size: 50

@@ -27,4 +27,5 @@ think_time: # Think Time (in seconds)
   Stock-Level:   5.00
 
 get_connection_everytime: false
+use_bind_variables: true
 statement_cache_size: 50

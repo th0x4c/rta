@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 require 'yaml'
 require 'thread'
+require 'forwardable'
 import java.sql.Timestamp
 import java.sql.DriverManager
 import Java::oracle.jdbc.pool.OracleDataSource
@@ -72,6 +73,7 @@ class TPCC < RTA::Session
     @keying_time = config["keying_time"]
     @think_time = config["think_time"]
     @get_connection_everytime = config["get_connection_everytime"]
+    @use_bind_variables = config["use_bind_variables"]
     @statement_cache_size = config["statement_cache_size"]
 
     # 接続
@@ -1078,10 +1080,69 @@ class TPCC < RTA::Session
       @con.setImplicitCachingEnabled(true)
       @con.setStatementCacheSize(@statement_cache_size)
     end
+
+    @con = LiteralSQLConnection.new(@con) unless @use_bind_variables
   end
 
   def close_connection
     @con.close if @con
     @con = nil
+  end
+end
+
+class LiteralSQLConnection
+  extend Forwardable
+
+  def_delegators :@connection, :commit, :rollback, :close, :isClosed, :setAutoCommit,
+                               :setImplicitCachingEnabled, :setStatementCacheSize
+
+  def initialize(connection)
+    @connection = connection
+  end
+
+  def prepareStatement(sql)
+    return LiteralStatement.new(@connection, sql)
+  end
+end
+
+class LiteralStatement
+  def initialize(connection, sql)
+    @connection = connection
+    @original_sql = sql
+    @statement = @connection.createStatement
+    @literals = Array.new
+  end
+
+  def close
+    @statement.close
+  end
+
+  def setInt(parameterIndex, x)
+    @literals[parameterIndex - 1] = x
+  end
+
+  def setDouble(parameterIndex, x)
+    @literals[parameterIndex - 1] = x
+  end
+
+  def setString(parameterIndex, x)
+    @literals[parameterIndex - 1] = "'" + x + "'"
+  end
+
+  def setTimestamp(parameterIndex, x)
+    @literals[parameterIndex - 1] = "to_date('#{x.toString.gsub(/\.\d+/, "")}', 'YYYY-MM-DD HH24:MI:SS')"
+  end
+
+  def executeQuery
+    return  @statement.executeQuery(literal_sql)
+  end
+
+  def executeUpdate
+    return  @statement.executeUpdate(literal_sql)
+  end
+
+  def literal_sql
+    format = @original_sql.gsub(/\?/, '%s')
+    return sprintf(format, *@literals)
   end
 end

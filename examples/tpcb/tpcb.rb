@@ -2,7 +2,7 @@
 require 'yaml'
 require 'thread'
 import java.sql.DriverManager
-import Java::oracle.jdbc.driver.OracleDriver
+import Java::oracle.jdbc.pool.OracleDataSource
 
 class TPCB < RTA::Session
   TPCB_HOME = File.dirname(__FILE__)
@@ -52,8 +52,11 @@ class TPCB < RTA::Session
 
     # 接続
     begin
-      @con = DriverManager.getConnection(config["tpcb_url"],
-               config["tpcb_user"], config["tpcb_password"])
+      @ds = OracleDataSource.new
+      @ds.setURL(config["tpcb_url"])
+      @ds.setUser(config["tpcb_user"])
+      @ds.setPassword(config["tpcb_password"])
+      @con = @ds.getConnection
       @con.setAutoCommit(false)
     rescue SQLException => e
       e.printStackTrace

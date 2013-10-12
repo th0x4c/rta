@@ -1,6 +1,20 @@
 require File.dirname(__FILE__) + '/spec_helper'
 require 'rta/transaction'
 
+module RTA
+  class Distribution
+    def <<(x)
+      return "RTA::Distribution#<< called"
+    end
+    def +(x)
+      return "RTA::Distribution#+ called"
+    end
+    def -(x)
+      return "RTA::Distribution#+ called"
+    end
+  end
+end
+
 describe RTA::Transaction do
   ELAPS = 0.003
   TX_COUNT = 20

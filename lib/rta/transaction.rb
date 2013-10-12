@@ -8,6 +8,10 @@ module RTA
   #
   # @see Transaction
   class TransactionStatistic
+    extend Forwardable
+
+    def_delegators :@distribution, :percentile, :histgram
+
     # Transaction 名
     # @return [String]
     attr_accessor :name
@@ -58,6 +62,10 @@ module RTA
     # @return [nil] 前回実行時にエラーなしの場合は nil
     attr_reader :sql_exception
 
+    # 実行時間の分布
+    # @return [Distribution]
+    attr_reader :distribution
+
     # TransactionStatistic インスタンスを生成
     # 
     # @param [String] name トランザクション名
@@ -68,7 +76,8 @@ module RTA
                                 :start_time => nil, :end_time => nil,
                                 :elapsed_time => 0, :total_elapsed_time => 0,
                                 :max_elapsed_time => nil, :min_elapsed_time => nil,
-                                :error_count => 0, :sql_exception => nil})
+                                :error_count => 0, :sql_exception => nil,
+                                :distribution => RTA::Distribution.new})
       @name = stat_hash[:name] || name
       @count = stat_hash[:count]
       @elapsed_time = stat_hash[:elapsed_time]
@@ -81,6 +90,7 @@ module RTA
       @start_time = stat_hash[:start_time]
       @end_time = stat_hash[:end_time]
       @sql_exception = stat_hash[:sql_exception]
+      @distribution = stat_hash[:distribution]
     end
 
     # トランザクション実行時に開始直前に呼ぶ.
@@ -120,6 +130,7 @@ module RTA
         @min_elapsed_time =
           @elapsed_time < @min_elapsed_time ? @elapsed_time : @min_elapsed_time
       end
+      @distribution << @elapsed_time
     end
 
     # 実行時間の平均
@@ -216,6 +227,8 @@ module RTA
         end
 
         stat_hash[:error_count] = @error_count + stat.error_count
+
+        stat_hash[:distribution] = @distribution + stat.distribution
         return TransactionStatistic.new(nil, stat_hash)
       end
     end
@@ -243,6 +256,7 @@ module RTA
         stat_hash[:max_elapsed_time] = @max_elapsed_time
         stat_hash[:min_elapsed_time] = @min_elapsed_time
         stat_hash[:error_count] = @error_count - stat.error_count
+        stat_hash[:distribution] = @distribution - stat.distribution
         return TransactionStatistic.new(nil, stat_hash)
       end
     end
@@ -261,7 +275,8 @@ module RTA
                                 :end_time, :elapsed_time, :total_elapsed_time,
                                 :max_elapsed_time, :min_elapsed_time,
                                 :error_count, :sql_exception,
-                                :avg_elapsed_time, :tps, :to_s
+                                :avg_elapsed_time, :tps, :to_s,
+                                :distribution, :percentile, :histgram
 
     attr_accessor :period
 

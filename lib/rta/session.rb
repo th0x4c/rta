@@ -29,6 +29,17 @@ module RTA
       return statistic.to_s
     end
 
+    # 指定した {Transaction} のヒストグラムを表す文字列を返す
+    #
+    # @param [String] name {Transaction} 名
+    # @param [Array<Session>] sess {Session} の配列
+    # @param [Symbol] phase フェーズ, `:before` または `:tx` または `:after`
+    # @param [Symbol] period ピリオド, `:rampup` または `:measurement` または`:rampdown
+    # @return [String]
+    def histgram(name = transaction_names[0], sess=sessions, phase = :tx, period = :measurement)
+      return stat_by_name(name, sess, phase, period).histgram
+    end
+
     # {Session} の保持する {Transaction} の Numerical Quantities Summary を表す
     # 文字列を返す.
     #
@@ -69,6 +80,14 @@ module RTA
         dr << sprintf("  - %-32s %7.3f / %7.3f / %7.3f",
                       st.name, st.min_elapsed_time || 0, st.avg_elapsed_time,
                       st.max_elapsed_time || 0)
+      end
+      dr << ""
+
+      dr << "Response Times (50th/ 80th/ 90th percentile) in seconds"
+      stats.each do |st|
+        dr << sprintf("  - %-32s %7.3f / %7.3f / %7.3f",
+                      st.name, st.percentile(50), st.percentile(80),
+                      st.percentile(90))
       end
       dr << ""
 

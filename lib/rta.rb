@@ -4,6 +4,7 @@ module RTA
 end
 
 require "#{RTA::ROOT}/rta/version"
+require "#{RTA::ROOT}/rta/distribution"
 require "#{RTA::ROOT}/rta/transaction"
 require "#{RTA::ROOT}/rta/log"
 require "#{RTA::ROOT}/rta/session"

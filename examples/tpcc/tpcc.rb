@@ -120,6 +120,8 @@ class TPCC < RTA::Session
   end
 
   def teardown_last
+    log.info(histgram("New-Order"))
+
     tx_names = ["New-Order", "Payment", "Order-Status", "Delivery",
                 "Stock-Level"]
     log.info(numerical_quantities_summary(tx_names))

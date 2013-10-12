@@ -145,6 +145,7 @@ class TPCB < RTA::Session
   end
 
   def teardown_last
+    self.log.info(histgram)
     self.log.info(numerical_quantities_summary)
   end
 end

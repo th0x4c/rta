@@ -29,6 +29,7 @@ class TPCB < RTA::Session
   @@mutex = Mutex.new
   @@truncate_history = false
   @@time_str = Time.now.strftime("%Y%m%d%H%M%S")
+  @@monitor = RTA::Monitor.new
 
   def setup
     # ログ
@@ -134,6 +135,16 @@ class TPCB < RTA::Session
     @tx_tpcb.whenever_sqlerror { @con.rollback }
   end
 
+  def setup_last
+    @@monitor.start(self) do |ses|
+      stat = ses.stat_by_name("tpcb", sessions, :tx, :rampup) +
+             ses.stat_by_name("tpcb", sessions, :tx, :measurement) +
+             ses.stat_by_name("tpcb", sessions, :tx, :rampdown)
+      stat.name = "tpcb"
+      stat
+    end
+  end
+
   def transaction
     return @tx_tpcb
   end
@@ -148,7 +159,14 @@ class TPCB < RTA::Session
   end
 
   def teardown_last
+    @@monitor.stop
+    self.log.info("")
+    self.log.info(@@monitor.throughput_graph)
+
+    self.log.info("")
     self.log.info(histgram)
+
+    self.log.info("")
     self.log.info(numerical_quantities_summary)
   end
 end

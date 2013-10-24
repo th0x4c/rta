@@ -20,6 +20,7 @@ class TPCC < RTA::Session
   NOT_FOUND_SQL_EXCEPTION = SQLException.new("Not found", nil, NOT_FOUND_ERROR_CODE)
 
   @@time_str = Time.now.strftime("%Y%m%d%H%M%S")
+  @@monitor = RTA::Monitor.new
 
   def setup
     # ログ
@@ -101,6 +102,16 @@ class TPCC < RTA::Session
     @tx["Stock-Level"] = slev   # Stock-Level Transaction
   end
 
+  def setup_last
+    @@monitor.start(self) do |ses|
+      stat = ses.stat_by_name("New-Order", sessions, :tx, :rampup) +
+             ses.stat_by_name("New-Order", sessions, :tx, :measurement) +
+             ses.stat_by_name("New-Order", sessions, :tx, :rampdown)
+      stat.name = "New-Order"
+      stat
+    end
+  end
+
   def transaction
     rand_pct = rand * 100 # rand returns a pseudorandom floating point number
                           # greater than or equal to 0.0 and less than 1.0
@@ -120,10 +131,16 @@ class TPCC < RTA::Session
   end
 
   def teardown_last
+    @@monitor.stop
+    log.info("")
+    log.info(@@monitor.throughput_graph)
+
+    log.info("")
     log.info(histgram("New-Order"))
 
     tx_names = ["New-Order", "Payment", "Order-Status", "Delivery",
                 "Stock-Level"]
+    log.info("")
     log.info(numerical_quantities_summary(tx_names))
   end
 

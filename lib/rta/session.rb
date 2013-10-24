@@ -195,6 +195,9 @@ module RTA
     # すべての {Session} インスタンスの配列
     @@sessions = Array.new
 
+    # #setup メソッド実行可能なインスタンス数
+    @@ready_to_setup = 0
+
     # #run メソッド実行中のインスタンス数
     @@running = 0
 
@@ -242,10 +245,14 @@ module RTA
     # @see #stop
     def run
       @@semaphore.synchronize do
-        @@running += 1
-        setup_first if @@running == 1
+        @@ready_to_setup += 1
+        setup_first if @@ready_to_setup == 1
       end
       setup
+      @@semaphore.synchronize do
+        @@running += 1
+        setup_last if @@running == @@sessions.count
+      end
       standby_msg = false
       start_msg = false
       while @status == GO || @status == STANDBY
@@ -395,6 +402,12 @@ module RTA
     # セッション開始時に1度だけ実行される処理.
     # 継承したクラスで実装.
     def setup
+    end
+
+    # すべての {Session} インスタンス中で最後のセッション開始時に1度だけ
+    # 実行される処理.
+    # 継承したクラスで実装.
+    def setup_last
     end
 
     # 実行する {Transaction} インスタンスを返す.

@@ -142,6 +142,8 @@ class TPCC < RTA::Session
                 "Stock-Level"]
     log.info("")
     log.info(numerical_quantities_summary(tx_names))
+    puts ""
+    puts numerical_quantities_summary(tx_names)
   end
 
   def transactions

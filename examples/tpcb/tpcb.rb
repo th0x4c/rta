@@ -168,5 +168,7 @@ class TPCB < RTA::Session
 
     self.log.info("")
     self.log.info(numerical_quantities_summary)
+    puts ""
+    puts numerical_quantities_summary
   end
 end

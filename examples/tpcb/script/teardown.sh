@@ -1,10 +1,7 @@
 #!/bin/sh
 
 TPCB_HOME="`dirname $0`/../"
-echo $TPCB_HOME | grep "^/" > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-  TPCB_HOME="`pwd`/$TPCB_HOME"
-fi
+TPCB_HOME=`cd $TPCB_HOME; pwd`
 
 . $TPCB_HOME/config/config.sh
 

@@ -73,6 +73,7 @@ class TPCC < RTA::Session
     @tx_percentage.each { |key, value| @tx_percentage[key] = (value / sum.to_f) * 100 }
     @keying_time = config["keying_time"]
     @think_time = config["think_time"]
+    @avoid_deadlock = config["avoid_deadlock"]
     @get_connection_everytime = config["get_connection_everytime"]
     @use_bind_variables = config["use_bind_variables"]
     @statement_cache_size = config["statement_cache_size"]
@@ -384,6 +385,10 @@ class TPCC < RTA::Session
         supware << ol_supply_w_id
         itemid << ol_i_id
         qty << ol_quantity 
+      end
+
+      if @avoid_deadlock
+        supware, itemid, qty = supware.zip(itemid, qty).sort.transpose
       end
 
       @input = Hash.new

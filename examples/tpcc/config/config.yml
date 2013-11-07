@@ -26,6 +26,7 @@ think_time: # Think Time (in seconds)
   Delivery:      5.00
   Stock-Level:   5.00
 
+avoid_deadlock: true
 get_connection_everytime: false
 use_bind_variables: true
 statement_cache_size: 50

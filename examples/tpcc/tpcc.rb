@@ -1068,7 +1068,7 @@ class TPCC < RTA::Session
     tx.before_each do
       @input = Hash.new
       @input[:w_id] = home_w_id
-      @input[:d_id] = (@session_id - 1) / count_ware + 1
+      @input[:d_id] = (@session_id - 1) / count_ware % DIST_PER_WARE + 1
       @input[:threshold] = random_number(10, 20)
 
       sleep(keying_time("Stock-Level"))

@@ -11,6 +11,7 @@ class TPCCLoad < RTA::Session
   include TPCCHelper
 
   INSERTS_PER_COMMIT = 100
+  BATCH_SIZE = 100
 
   @@mutexes = [Mutex.new, Mutex.new]
   @@timestamp = java.sql.Date.new(Time.now.to_f * 1000)
@@ -57,9 +58,12 @@ class TPCCLoad < RTA::Session
       e.printStackTrace
     end
 
+    @stmts = { :item => [], :ware => [], :stock => [], :district => [],
+               :cust => [], :ord => [] }
+
     # トランザクション
     @tx_last = RTA::Transaction.new("last") do
-      @con.commit
+      commit
     end
 
     self.go
@@ -118,7 +122,7 @@ class TPCCLoad < RTA::Session
   end
 
   def teardown
-    @con.commit
+    commit
     @con.close
   end
 
@@ -142,25 +146,35 @@ class TPCCLoad < RTA::Session
 
           sql = "INSERT INTO item (i_id, i_im_id, i_name, i_price, i_data) "+
                 "VALUES (?, ?, ?, ?, ?)"
-          stmt = @con.prepareStatement(sql)
+          @stmts[:item][0] ||= @con.prepareStatement(sql)
+          stmt = @stmts[:item][0]
           stmt.setInt(1, i_id)
           stmt.setInt(2, i_im_id)
           stmt.setString(3, i_name)
           stmt.setDouble(4, i_price)
           stmt.setString(5, i_data)
-          stmt.executeUpdate
+          if BATCH_SIZE > 0
+            stmt.addBatch
+          else
+            stmt.executeUpdate
+          end
 
           log.info(i_id.to_s) if i_id % 5000 == 0
         ensure
-          stmt.close if stmt
+          unless BATCH_SIZE > 0
+            @stmts[:item].each { |st| st.close if st }
+            @stmts[:item] = []
+          end
         end
       end
 
       @load_items.after_each do
-        @con.commit if self.stat.count % INSERTS_PER_COMMIT == 0
+        execute_batch if BATCH_SIZE > 0 && self.stat.count % BATCH_SIZE == 0
+
+        commit if self.stat.count % INSERTS_PER_COMMIT == 0
 
         if @loading == MAXITEMS
-          @con.commit
+          commit
           log.info("Item Done.")
         end
       end
@@ -185,7 +199,8 @@ class TPCCLoad < RTA::Session
           sql = "INSERT INTO warehouse (w_id, w_name, " +
                 "w_street_1, w_street_2, w_city, w_state, w_zip, w_tax, w_ytd) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-          stmt = @con.prepareStatement(sql)
+          @stmts[:ware][0] ||= @con.prepareStatement(sql)
+          stmt = @stmts[:ware][0]
           stmt.setInt(1, w_id)
           stmt.setString(2, w_name)
           stmt.setString(3, w_street_1)
@@ -195,15 +210,24 @@ class TPCCLoad < RTA::Session
           stmt.setString(7, w_zip)
           stmt.setDouble(8, w_tax)
           stmt.setDouble(9, w_ytd)
-          stmt.executeUpdate
+          if BATCH_SIZE > 0
+            stmt.addBatch
+          else
+            stmt.executeUpdate
+          end
         ensure
-          stmt.close if stmt
+          unless BATCH_SIZE > 0
+            @stmts[:ware].each { |st| st.close if st }
+            @stmts[:ware] = []
+          end
         end
       end
 
       @load_ware.after_each do
-        @con.commit if self.stat.count % INSERTS_PER_COMMIT == 0
-        @con.commit if @loading == count_ware
+        execute_batch if BATCH_SIZE > 0 && self.stat.count % BATCH_SIZE == 0
+
+        commit if self.stat.count % INSERTS_PER_COMMIT == 0
+        commit if @loading == count_ware
       end
 
       @load_ware.whenever_sqlerror { @con.rollback }
@@ -241,7 +265,8 @@ class TPCCLoad < RTA::Session
                 "?, ?, ?, ?, ?, " +
                 "?, ?, ?, ?, ?, " +
                 "?, 0, 0, 0)"
-          stmt = @con.prepareStatement(sql)
+          @stmts[:stock][0] ||= @con.prepareStatement(sql)
+          stmt = @stmts[:stock][0]
           stmt.setInt(1, s_i_id)
           stmt.setInt(2, s_w_id)
           stmt.setInt(3, s_quantity)
@@ -256,19 +281,28 @@ class TPCCLoad < RTA::Session
           stmt.setString(12, s_dist_09)
           stmt.setString(13, s_dist_10)
           stmt.setString(14, s_data)
-          stmt.executeUpdate
+          if BATCH_SIZE > 0
+            stmt.addBatch
+          else
+            stmt.executeUpdate
+          end
 
           log.info(s_i_id.to_s) if s_i_id % 5000 == 0
         ensure
-          stmt.close if stmt
+          unless BATCH_SIZE > 0
+            @stmts[:stock].each { |st| st.close if st }
+            @stmts[:stock] = []
+          end
         end
       end
 
       @load_stock.after_each do
-        @con.commit if self.stat.count % INSERTS_PER_COMMIT == 0
+        execute_batch if BATCH_SIZE > 0 && self.stat.count % BATCH_SIZE == 0
+
+        commit if self.stat.count % INSERTS_PER_COMMIT == 0
 
         if @loading == count_ware * MAXITEMS
-          @con.commit
+          commit
           log.info("Stock Done.")
         end
       end
@@ -298,7 +332,8 @@ class TPCCLoad < RTA::Session
                 "VALUES (?, ?, ?, " +
                 "?, ?, ?, ?, ?, " +
                 "?, ?, ?)"
-          stmt = @con.prepareStatement(sql)
+          @stmts[:district][0] ||= @con.prepareStatement(sql)
+          stmt = @stmts[:district][0]
           stmt.setInt(1, d_id)
           stmt.setInt(2, d_w_id)
           stmt.setString(3, d_name)
@@ -310,15 +345,24 @@ class TPCCLoad < RTA::Session
           stmt.setDouble(9, d_tax)
           stmt.setDouble(10, d_ytd)
           stmt.setInt(11, d_next_o_id)
-          stmt.executeUpdate
+          if BATCH_SIZE > 0
+            stmt.addBatch
+          else
+            stmt.executeUpdate
+          end
         ensure
-          stmt.close if stmt
+          unless BATCH_SIZE > 0
+            @stmts[:district].each { |st| st.close if st }
+            @stmts[:district] = []
+          end
         end
       end
 
       @load_district.after_each do
-        @con.commit if self.stat.count % INSERTS_PER_COMMIT == 0
-        @con.commit if @loading == count_ware * DIST_PER_WARE
+        execute_batch if BATCH_SIZE > 0 && self.stat.count % BATCH_SIZE == 0
+
+        commit if self.stat.count % INSERTS_PER_COMMIT == 0
+        commit if @loading == count_ware * DIST_PER_WARE
       end
 
       @load_district.whenever_sqlerror { @con.rollback }
@@ -369,7 +413,8 @@ class TPCCLoad < RTA::Session
                 "?, ?, ?, " +
                 "?, ?, ?, ?, " +
                 "10.0, 1, 0)"
-          stmt[0] = @con.prepareStatement(sql)
+          @stmts[:cust][0] ||= @con.prepareStatement(sql)
+          stmt[0] = @stmts[:cust][0]
           stmt[0].setInt(1, c_id)
           stmt[0].setInt(2, c_d_id)
           stmt[0].setInt(3, c_w_id)
@@ -388,7 +433,11 @@ class TPCCLoad < RTA::Session
           stmt[0].setDouble(16, c_discount)
           stmt[0].setDouble(17, c_balance)
           stmt[0].setString(18, c_data)
-          stmt[0].executeUpdate
+          if BATCH_SIZE > 0
+            stmt[0].addBatch
+          else
+            stmt[0].executeUpdate
+          end
 
           h_amount = 10.0
           h_data = make_alpha_string(12, 24)
@@ -397,7 +446,8 @@ class TPCCLoad < RTA::Session
                 "h_w_id, h_d_id, h_date, h_amount, h_data) " +
                 "VALUES (?, ?, ?, " +
                 "?, ?, ?, ?, ?)"
-          stmt[1] = @con.prepareStatement(sql)
+          @stmts[:cust][1] ||= @con.prepareStatement(sql)
+          stmt[1] = @stmts[:cust][1]
           stmt[1].setInt(1, c_id)
           stmt[1].setInt(2, c_d_id)
           stmt[1].setInt(3, c_w_id)
@@ -406,19 +456,28 @@ class TPCCLoad < RTA::Session
           stmt[1].setDate(6, @@timestamp)
           stmt[1].setDouble(7, h_amount)
           stmt[1].setString(8, h_data)
-          stmt[1].executeUpdate
+          if BATCH_SIZE > 0
+            stmt[1].addBatch
+          else
+            stmt[1].executeUpdate
+          end
 
           log.info(c_id.to_s) if c_id % 1000 == 0
         ensure
-          stmt.each { |s| s.close if s }
+          unless BATCH_SIZE > 0
+            @stmts[:cust].each { |st| st.close if st }
+            @stmts[:cust] = []
+          end
         end
       end
 
       @load_cust.after_each do
-        @con.commit if self.stat.count % INSERTS_PER_COMMIT == 0
+        execute_batch if BATCH_SIZE > 0 && self.stat.count % BATCH_SIZE == 0
+
+        commit if self.stat.count % INSERTS_PER_COMMIT == 0
 
         if @loading == count_ware * DIST_PER_WARE * CUST_PER_DIST
-          @con.commit
+          commit
           log.info("Customer Done.")
         end
       end
@@ -447,28 +506,39 @@ class TPCCLoad < RTA::Session
                   "o_entry_d, o_carrier_id, o_ol_cnt, o_all_local) " +
                   "VALUES (?, ?, ?, ?, " +
                   "?, NULL, ?, 1)"
-            stmt[0] = @con.prepareStatement(sql)
+            @stmts[:ord][0] ||= @con.prepareStatement(sql)
+            stmt[0] = @stmts[:ord][0]
             stmt[0].setInt(1, o_id)
             stmt[0].setInt(2, o_c_id)
             stmt[0].setInt(3, o_d_id)
             stmt[0].setInt(4, o_w_id)
             stmt[0].setDate(5, @@timestamp)
             stmt[0].setInt(6, o_ol_cnt)
-            stmt[0].executeUpdate
+            if BATCH_SIZE > 0
+              stmt[0].addBatch
+            else
+              stmt[0].executeUpdate
+            end
 
             sql = "INSERT INTO new_order (no_o_id, no_d_id, no_w_id) " +
                 "VALUES (?, ?, ?)"
-            stmt[1] = @con.prepareStatement(sql)
+            @stmts[:ord][1] ||= @con.prepareStatement(sql)
+            stmt[1] = @stmts[:ord][1]
             stmt[1].setInt(1, o_id)
             stmt[1].setInt(2, o_d_id)
             stmt[1].setInt(3, o_w_id)
-            stmt[1].executeUpdate
+            if BATCH_SIZE > 0
+              stmt[1].addBatch
+            else
+              stmt[1].executeUpdate
+            end
           else
             sql = "INSERT INTO orders (o_id, o_c_id, o_d_id, o_w_id, " +
                   "o_entry_d, o_carrier_id, o_ol_cnt, o_all_local) " +
                   "VALUES (?, ?, ?, ?, " +
                   "?, ?, ?, 1)"
-            stmt[2] = @con.prepareStatement(sql)
+            @stmts[:ord][2] ||= @con.prepareStatement(sql)
+            stmt[2] = @stmts[:ord][2]
             stmt[2].setInt(1, o_id)
             stmt[2].setInt(2, o_c_id)
             stmt[2].setInt(3, o_d_id)
@@ -476,7 +546,11 @@ class TPCCLoad < RTA::Session
             stmt[2].setDate(5, @@timestamp)
             stmt[2].setInt(6, o_carrier_id)
             stmt[2].setInt(7, o_ol_cnt)
-            stmt[2].executeUpdate
+            if BATCH_SIZE > 0
+              stmt[2].addBatch
+            else
+              stmt[2].executeUpdate
+            end
           end
 
           1.upto(o_ol_cnt) do |ol|
@@ -498,7 +572,8 @@ class TPCCLoad < RTA::Session
                     "VALUES (?, ?, ?, ?, " +
                     "?, ?, ?, ?, " +
                     "?, NULL)"
-              stmt[3] ||= @con.prepareStatement(sql)
+              @stmts[:ord][3] ||= @con.prepareStatement(sql)
+              stmt[3] = @stmts[:ord][3]
               stmt[3].setInt(1, o_id)
               stmt[3].setInt(2, o_d_id)
               stmt[3].setInt(3, o_w_id)
@@ -508,7 +583,11 @@ class TPCCLoad < RTA::Session
               stmt[3].setInt(7, ol_quantity)
               stmt[3].setDouble(8, ol_amount)
               stmt[3].setString(9, ol_dist_info)
-              stmt[3].executeUpdate
+              if BATCH_SIZE > 0
+                stmt[3].addBatch
+              else
+                stmt[3].executeUpdate
+              end
             else
               # OL_AMOUNT = 0.00 if OL_O_ID < 2,101, random within [0.01 .. 9,999.99] otherwise
               ol_amount = 0.0
@@ -521,7 +600,8 @@ class TPCCLoad < RTA::Session
                     "VALUES (?, ?, ?, ?, " +
                     "?, ?, ?, ?, " +
                     "?, ?)"
-              stmt[4] ||= @con.prepareStatement(sql)
+              @stmts[:ord][4] ||= @con.prepareStatement(sql)
+              stmt[4] = @stmts[:ord][4]
               stmt[4].setInt(1, o_id)
               stmt[4].setInt(2, o_d_id)
               stmt[4].setInt(3, o_w_id)
@@ -532,21 +612,30 @@ class TPCCLoad < RTA::Session
               stmt[4].setDouble(8, ol_amount)
               stmt[4].setString(9, ol_dist_info)
               stmt[4].setDate(10, @@timestamp)
-              stmt[4].executeUpdate
+              if BATCH_SIZE > 0
+                stmt[4].addBatch
+              else
+                stmt[4].executeUpdate
+              end
             end
           end
 
           log.info(o_id.to_s) if o_id % 1000 == 0
         ensure
-          stmt.each { |s| s.close if s }
+          unless BATCH_SIZE > 0
+            @stmts[:ord].each { |st| st.close if st }
+            @stmts[:ord] = []
+          end
         end
       end
 
       @load_ord.after_each do
-        @con.commit if self.stat.count % INSERTS_PER_COMMIT == 0
+        execute_batch if BATCH_SIZE > 0 && self.stat.count % BATCH_SIZE == 0
+
+        commit if self.stat.count % INSERTS_PER_COMMIT == 0
 
         if @loading == count_ware * DIST_PER_WARE * ORD_PER_DIST
-          @con.commit
+          commit
           log.info("Orders Done.")
         end
       end
@@ -610,5 +699,23 @@ class TPCCLoad < RTA::Session
 
   def count_ware
     return @last_warehouse_id - @first_warehouse_id + 1
+  end
+
+  def commit
+    execute_batch if BATCH_SIZE > 0
+    @con.commit
+  end
+
+  def execute_batch
+    @stmts.each_value do |sts|
+      sts.each do |stmt|
+        if stmt
+          stmt.executeBatch
+          stmt.close
+        end
+      end
+    end
+    @stmts = { :item => [], :ware => [], :stock => [], :district => [],
+               :cust => [], :ord => [] }
   end
 end

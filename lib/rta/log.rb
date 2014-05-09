@@ -12,6 +12,7 @@ module RTA
 
     @@files = Hash.new
     @@instance_count = Hash.new
+    @@semaphore = Mutex.new
 
     # ログのレベル
     attr_accessor :level
@@ -31,20 +32,24 @@ module RTA
         end
       else
         filename = File.expand_path(filename)
-        @@instance_count[filename] ||= 0
-        if @@instance_count[filename] == 0
-          @@files[filename] = File.open(filename, "a")
+        @@semaphore.synchronize do
+          @@instance_count[filename] ||= 0
+          if @@instance_count[filename] == 0
+            @@files[filename] = File.open(filename, "a")
+          end
+          @@instance_count[filename] += 1
+          @file = @@files[filename]
         end
-        @@instance_count[filename] += 1
-        @file = @@files[filename]
       end
     end
 
     # ログをクローズする
     def close
       return if @file.equal?(STDOUT)
-      @@instance_count[@file.path] -= 1
-      @file.close if @@instance_count[@file.path] == 0
+      @@semaphore.synchronize do
+        @@instance_count[@file.path] -= 1
+        @file.close if @@instance_count[@file.path] == 0
+      end
     end
 
     # メッセージをログに記録する

@@ -1,0 +1,9 @@
+# Configuration for tpch and teardown script
+
+tpch_user: tpch
+tpch_password: tpch
+tpch_url: jdbc:oracle:thin:@//sv1.local:1521/PROD1.local
+os_directory: /home/oracle/rta_tpch
+table_tablespace: USERS
+index_tablespace: USERS
+parallel_degree: 4

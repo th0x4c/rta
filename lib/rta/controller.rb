@@ -136,6 +136,7 @@ module RTA
             sm.stop(opt.sids)
           when "console"
             $rta = sm
+            ARGV.clear
             IRB.start(__FILE__)
           end
         end

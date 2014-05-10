@@ -1269,7 +1269,7 @@ class TPCH < RTA::Session
     minute = sec.to_i / 60 % 60
     second = sec % 60
 
-    return sprintf("%02d:%02d:%.3f", hour, minute, second)
+    return sprintf("%02d:%02d:%06.3f", hour, minute, second)
   end
 
   def avg(ary)

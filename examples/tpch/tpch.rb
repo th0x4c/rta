@@ -1032,6 +1032,9 @@ class TPCH < RTA::Session
                   measurement_interval_in_throughput_test)
     es << ""
 
+    es << errors_summary
+    es << ""
+
     es << "Duration of stream execution:"
     es << "+----------+----------+-------------------+--------+-------------------+-------------------+"
     es << "|          |   Seed   | Query Start Time  |Duration|  RF1 Start Time   |  RF2 Start Time   |"
@@ -1207,6 +1210,44 @@ class TPCH < RTA::Session
     return gr.join("\n")
   end
 
+  def errors_summary
+    es = Array.new
+
+    es << "Number of Errors"
+
+    tx_load = self.sessions[0].transactions.find { |tx| tx.name == "tpch load" }
+    es << sprintf("         Database Load   %67s",
+                  tx_load ? tx_load.error_count.to_s : "-")
+    if tx_load && tx_load.error_count > 0
+        es << "         (#{padding(tx_load.sql_exception.getMessage.chomp, 81)})"
+    end
+
+    num_errors = power_test_transactions.inject(0) { |sum, tx| sum + tx.error_count }
+    es << sprintf("         Power Test      %67d", num_errors)
+    if num_errors > 0
+      power_test_transactions.each do |tx|
+        es << "         (#{padding(tx.sql_exception.getMessage.chomp, 81)})" if tx.sql_exception
+      end
+    end
+
+    num_errors = throughput_test_transactions.inject(0) { |sum, tx| sum + tx.error_count }
+    es << sprintf("         Throughput Test %67d", num_errors)
+    if num_errors > 0
+      throughput_test_transactions.each do |tx|
+        es << "         (#{padding(tx.sql_exception.getMessage.chomp, 81)})" if tx.sql_exception
+      end
+    end
+
+    return es.join("\n")
+  end
+
+  def padding(str, size)
+    str_size = str.each_char
+                  .map{|c| c.bytesize == 1 ? 1 : 2}
+                  .reduce { |sum, i| sum + i }
+    return str_size < size ? " " * (size - str_size) + str : str
+  end
+
   def timing_intervals_for_query
     q = Array.new
     (1..22).each { |n| q[n] = Array.new }
@@ -1289,10 +1330,7 @@ class TPCH < RTA::Session
   end
 
   def tpch_power
-    query_intervals = self.sessions[0]
-                          .transactions
-                          .find_all { |tx| tx.name =~ /tpch power test/ }
-                          .map { |ptx| ptx.total_elapsed_time }
+    query_intervals = power_test_transactions.map { |ptx| ptx.total_elapsed_time }
 
     return 3600 * Math.exp(-1.0/24.0 * (query_intervals.inject(0) { |x, i| x + Math.log(i) })) * scale_factor
   end
@@ -1308,14 +1346,25 @@ class TPCH < RTA::Session
   end
 
   def measurement_interval_in_throughput_test
-    all_throughput_test_txs = Array.new
+    first_time = throughput_test_transactions.map { |tx| tx.first_time }.min
+    end_time = throughput_test_transactions.map { |tx| tx.end_time }.max
+    return end_time - first_time
+  end
+
+  def power_test_transactions
+    return self.sessions[0]
+               .transactions
+               .find_all { |tx| tx.name =~ /tpch power test/ }
+  end
+
+  def throughput_test_transactions
+    throughput_test_txs = Array.new
     self.sessions.each do |ses|
-      all_throughput_test_txs += ses.transactions
-                                    .find_all { |tx| tx.name =~ /tpch Q\d+/ || tx.name =~ /tpch throughput test/ }
+      throughput_test_txs += ses.transactions
+                                .find_all { |tx| tx.name =~ /tpch Q\d+/ ||
+                                                 tx.name =~ /tpch throughput test/ }
     end
 
-    first_time = all_throughput_test_txs.map { |tx| tx.first_time }.min
-    end_time = all_throughput_test_txs.map { |tx| tx.end_time }.max
-    return end_time - first_time
+    return throughput_test_txs
   end
 end

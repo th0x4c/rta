@@ -17,7 +17,7 @@ generate_data_for_refresh_function ()
   then
     refresh_count=`cat $TPCH_HOME/config/refresh_count`
   else
-    echo 0 > $TPCH_HOME/config/refresh_count    
+    echo 0 > $TPCH_HOME/config/refresh_count
   fi
   local begin_refresh_nth=`expr $refresh_count + 1`
   local end_refresh_nth=`expr $begin_refresh_nth + $STREAMS`

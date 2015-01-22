@@ -337,7 +337,7 @@ class TPCH < RTA::Session
         l_shipmode      ,
         l_linenumber    NOT NULL,
         l_shipinstruct  ,
-        l_comment            
+        l_comment
       )
       PARALLEL #{parallel_degree}
       NOLOGGING
@@ -397,8 +397,8 @@ class TPCH < RTA::Session
         o_clerk         ,
         o_orderstatus   ,
         o_totalprice    ,
-        o_comment       
-      ) 
+        o_comment
+      )
       PARALLEL #{parallel_degree}
       NOLOGGING
       COMPRESS
@@ -976,7 +976,7 @@ class TPCH < RTA::Session
       rset = stmt.executeQuery(sql)
       rsmd = rset.getMetaData
       cc = rsmd.getColumnCount
-      
+
       # print column name
       self.log.info((1..cc).map { |n| rsmd.getColumnLabel(n) }.join(", "))
 

@@ -67,7 +67,7 @@ module RTA
     attr_reader :distribution
 
     # TransactionStatistic インスタンスを生成
-    # 
+    #
     # @param [String] name トランザクション名
     # @param [Hash]   stat_hash {TransactionStatistic} を表す +Hash+
     # @return [TransactionStatistic]
@@ -95,7 +95,7 @@ module RTA
 
     # トランザクション実行時に開始直前に呼ぶ.
     # もし block が渡されていれば, そのブロックを実行.
-    # 
+    #
     # @yield 実行するトランザクション
     def start
       @sql_exception = nil
@@ -108,7 +108,7 @@ module RTA
     end
 
     # +SQLException+ を設定
-    # 
+    #
     # @param [SQLException] exception トランザクション実行時に発生した +SQLException+
     def sql_exception=(exception)
       @sql_exception = exception
@@ -134,7 +134,7 @@ module RTA
     end
 
     # 実行時間の平均
-    # 
+    #
     # @return [Float] 実行時間の平均
     def avg_elapsed_time
       return @count == 0 ? 0 : @total_elapsed_time / @count
@@ -142,7 +142,7 @@ module RTA
 
     # 1 秒あたりの実行回数.
     # Transaction Per Seconds.
-    # 
+    #
     # @return [Float] 1 秒あたりの実行回数
     def tps
       actual_elapsed_time = @count == 0 ? 0 : @end_time - @first_time
@@ -150,7 +150,7 @@ module RTA
     end
 
     # 各統計情報を文字列にして返す
-    # 
+    #
     # @return [String]
     def to_s
       return "tx: \"#{@name}\", " +
@@ -168,7 +168,7 @@ module RTA
 
     # {TransactionStatistic} 同士の統計情報を加えて新たな {TransactionStatistic}
     # インスタンスを生成
-    # 
+    #
     # @return [TransactionStatistic]
     def +(stat)
       unless stat.class == TransactionStatistic
@@ -235,7 +235,7 @@ module RTA
 
     # 別時刻の時点の {TransactionStatistic} インスタンスの統計情報の差分を表す
     # 新たな {TransactionStatistic} インスタンスを生成
-    # 
+    #
     # @return [TransactionStatistic]
     def -(stat)
       if @name != stat.name || @first_time != stat.first_time

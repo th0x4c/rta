@@ -222,7 +222,7 @@ module RTA
     attr_accessor :log
 
     # セッションを生成
-    # 
+    #
     # @param [Number] sid セッションID
     # @param [Log] log ログ
     # @return [Session]
@@ -298,7 +298,7 @@ module RTA
     end
 
     # ステータスを {STANDBY} 状態に変更
-    # 
+    #
     # @see #status
     # @see STANDBY
     def standby
@@ -306,7 +306,7 @@ module RTA
     end
 
     # ステータスを {GO} 状態に変更
-    # 
+    #
     # @see #status
     # @see GO
     def go
@@ -314,7 +314,7 @@ module RTA
     end
 
     # ステータスを {STOP} 状態に変更
-    # 
+    #
     # @see #status
     # @see STOP
     def stop
@@ -322,7 +322,7 @@ module RTA
     end
 
     # 保持する {Transaction} インスタンスを配列にして返す
-    # 
+    #
     # @return [Array<Transaction>]
     def transactions
       txs = Array.new
@@ -335,14 +335,14 @@ module RTA
     end
 
     # 統計情報出力の際に使用するセッション名
-    # 
+    #
     # @return [String]
     def stat_name
       return "All SID #{@session_id} TXs"
     end
 
     # 統計情報のサマリーを表す文字列
-    # 
+    #
     # @return [String]
     def summary
       msgs = Array.new
@@ -474,7 +474,7 @@ module RTA
     def stop_service
       DRb.stop_service
     end
- 
+
     # 指定されたセッションのステータスを {Session::STANDBY} にする.
     # 指定なしの場合はすべてのセッションのステータスを変更.
     #
@@ -557,7 +557,7 @@ module RTA
     end
 
     # すべてのセッションの保持する {Transaction} インスタンスを配列にして返す
-    # 
+    #
     # @return [Array<Transaction>]
     def transactions
       txs = Array.new
@@ -568,7 +568,7 @@ module RTA
     end
 
     # 統計情報出力の際に使用する名前
-    # 
+    #
     # @return [String]
     def stat_name
       return "All SID TXs"

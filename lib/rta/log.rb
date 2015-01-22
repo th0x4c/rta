@@ -25,7 +25,7 @@ module RTA
       @level = INFO # デフォルトの level
       unless filename
         @file = STDOUT
-        
+
         # @file.flock を呼べるようにする
         # see RTA::Log#puts
         def @file.flock(op)
@@ -53,7 +53,7 @@ module RTA
     end
 
     # メッセージをログに記録する
-    # 
+    #
     # @param [String] msg 出力するメッセージ
     def puts(msg)
       msg = add_string_to_each_line(time_to_str(Time.now) + " ", msg)
@@ -64,7 +64,7 @@ module RTA
     end
 
     # {FATAL} 情報のメッセージをログに記録する
-    # 
+    #
     # @param [String] msg 出力するメッセージ
     # @see FATAL
     def fatal(msg)
@@ -74,7 +74,7 @@ module RTA
     end
 
     # {ERROR} 情報のメッセージをログに記録する
-    # 
+    #
     # @param [String] msg 出力するメッセージ
     # @see ERROR
     def error(msg)
@@ -84,7 +84,7 @@ module RTA
     end
 
     # {WARN} 情報のメッセージをログに記録する
-    # 
+    #
     # @param [String] msg 出力するメッセージ
     # @see WARN
     def warn(msg)
@@ -94,7 +94,7 @@ module RTA
     end
 
     # {INFO} 情報のメッセージをログに記録する
-    # 
+    #
     # @param [String] msg 出力するメッセージ
     # @see INFO
     def info(msg)
@@ -104,7 +104,7 @@ module RTA
     end
 
     # {DEBUG} 情報のメッセージをログに記録する
-    # 
+    #
     # @param [String] msg 出力するメッセージ
     # @see DEBUG
     def debug(msg)

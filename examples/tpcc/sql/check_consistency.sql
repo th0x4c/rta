@@ -28,7 +28,7 @@ SELECT * FROM x
 WHERE d_next_o_id - 1 = max_o_id AND d_next_o_id - 1 = max_no_o_id
 /
 
--- Condition 3: max(NO_O_ID) - min(NO_O_ID) + 1 
+-- Condition 3: max(NO_O_ID) - min(NO_O_ID) + 1
 --              = [number of rows in the NEW-ORDER table for this district]
 WITH x AS (SELECT no_w_id, no_d_id, MAX(no_o_id) max_no_o_id,
                   MIN(no_o_id) min_no_o_id, COUNT(*) count_no
@@ -58,7 +58,7 @@ WHERE sum_o_ol_cnt = count_ol
 /
 
 -- Condition 5: For any row in the ORDER table, O_CARRIER_ID is set to a null
---              value if and only if there is a corresponding row in the 
+--              value if and only if there is a corresponding row in the
 --              NEW-ORDER table
 WITH x AS (SELECT o.o_w_id, o.o_d_id, o.o_id, o.o_carrier_id, no.count_no
            FROM orders o,

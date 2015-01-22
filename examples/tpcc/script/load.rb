@@ -114,7 +114,7 @@ class TPCCLoad < RTA::Session
         init_permutation if @loading % 3000 == 1
         tx = load_ord
       else
-        stop 
+        stop
         tx = @tx_last
       end
     end
@@ -398,7 +398,7 @@ class TPCCLoad < RTA::Session
           c_discount = random_number(0, 50) / 100.0
           c_balance = -10.0
           c_data = make_alpha_string(300, 500)
-          
+
           log.debug("CID: #{c_id}, LST: #{c_last}, P#: #{c_phone}")
 
           sql = "INSERT INTO customer (c_id, c_d_id, c_w_id, " +

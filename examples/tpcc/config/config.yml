@@ -16,7 +16,7 @@ keying_time: # Keying Time (in seconds)
   New-Order:    18.00
   Payment:       3.00
   Order-Status:  2.00
-  Delivery:      2.00  
+  Delivery:      2.00
   Stock-Level:   2.00
 
 think_time: # Think Time (in seconds)

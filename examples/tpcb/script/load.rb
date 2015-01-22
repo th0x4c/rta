@@ -100,7 +100,7 @@ class TPCBLoad < RTA::Session
         @account_id = @@class_account_id
         @@class_account_id += 1
       else
-        stop 
+        stop
         tx = @tx_last
       end
     end

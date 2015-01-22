@@ -47,7 +47,7 @@ class TPCC < RTA::Session
     #   New-Order:    18.00
     #   Payment:       3.00
     #   Order-Status:  2.00
-    #   Delivery:      2.00  
+    #   Delivery:      2.00
     #   Stock-Level:   2.00
     #
     # think_time: # Think time (in seconds)
@@ -96,10 +96,10 @@ class TPCC < RTA::Session
 
     # Transaction
     @tx = Hash.new
-    @tx["New-Order"] = neword   # New-Order Transaction  
-    @tx["Payment"] = payment    # Payment Transaction    
+    @tx["New-Order"] = neword   # New-Order Transaction
+    @tx["Payment"] = payment    # Payment Transaction
     @tx["Order-Status"] = ostat # Order-Status Transaction
-    @tx["Delivery"] = delivery  # Delivery Transaction   
+    @tx["Delivery"] = delivery  # Delivery Transaction
     @tx["Stock-Level"] = slev   # Stock-Level Transaction
   end
 
@@ -384,7 +384,7 @@ class TPCC < RTA::Session
 
         supware << ol_supply_w_id
         itemid << ol_i_id
-        qty << ol_quantity 
+        qty << ol_quantity
       end
 
       if @avoid_deadlock

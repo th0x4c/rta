@@ -31,7 +31,7 @@ CREATE TABLE branch
 TABLESPACE &branch_tablespace;
 
 CREATE TABLE history
-(   
+(
   teller_id         NUMBER,
   branch_id         NUMBER,
   account_id        NUMBER,

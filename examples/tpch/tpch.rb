@@ -866,8 +866,7 @@ class TPCH < RTA::Session
     EOS
     sqls << sql
 
-    sqls << "DROP TABLE temp_orderkey"
-    sqls << "PURGE TABLE temp_orderkey"
+    sqls << "DROP TABLE temp_orderkey PURGE"
     sqls << "DROP TABLE temp_orderkey_et"
 
     sqls.each { |sql| exec_sql(con, sql.chomp.undent) }

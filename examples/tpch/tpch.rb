@@ -46,7 +46,7 @@ class TPCH < RTA::Session
     tx_load = RTA::Transaction.new("tpch load") do
       create_directory(@con, config["os_directory"])
       create_external_table(@con, config["parallel_degree"])
-      create_table(@con, config["parallel_degree"], config["table_tablespace"])
+      create_table(@con, config["parallel_degree"], config["table_tablespace"], config["subpartition_count"])
       create_index(@con, config["parallel_degree"], config["index_tablespace"])
       analyze(@con, config["parallel_degree"], config["tpch_user"])
     end
@@ -315,7 +315,7 @@ class TPCH < RTA::Session
     EOS
   end
 
-  def create_table(con, parallel_degree, tablespace_name)
+  def create_table(con, parallel_degree, tablespace_name, subpartition_count)
     sqls = Array.new
 
     # lineitem
@@ -344,10 +344,12 @@ class TPCH < RTA::Session
       COMPRESS
       TABLESPACE #{tablespace_name}
       PARTITION BY RANGE (l_shipdate)
-      SUBPARTITION BY HASH (l_partkey)
-      SUBPARTITIONS #{parallel_degree}
-      (
     EOS
+    if subpartition_count > 0
+      sql += "      SUBPARTITION BY HASH (l_partkey)\n" +
+             "      SUBPARTITIONS #{subpartition_count}\n"
+    end
+    sql += "      (\n"
 
     # from 1992-01-01 to 1998-11-01
     part_dates = (1992..1998).map do |year|
@@ -404,10 +406,12 @@ class TPCH < RTA::Session
       COMPRESS
       TABLESPACE #{tablespace_name}
       PARTITION BY RANGE (o_orderdate)
-      SUBPARTITION BY HASH (o_custkey)
-      SUBPARTITIONS #{parallel_degree}
-      (
     EOS
+    if subpartition_count > 0
+      sql += "      SUBPARTITION BY HASH (o_custkey)\n" +
+             "      SUBPARTITIONS #{subpartition_count}\n"
+    end
+    sql += "      (\n"
 
     # from 1992-01-01 to 1998-08-01
     part_dates = (1992..1998).map do |year|

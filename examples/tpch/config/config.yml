@@ -7,3 +7,4 @@ os_directory: /home/oracle/rta_tpch
 table_tablespace: USERS
 index_tablespace: USERS
 parallel_degree: 4
+subpartition_count: 4

@@ -7,6 +7,12 @@ import Java::oracle.jdbc.driver.OracleDriver
 
 require File.dirname(__FILE__) + '/helper'
 
+class String
+  def undent
+    gsub(/^.{#{(slice(/^ +/) || '').length}}/, '')
+  end
+end
+
 class TPCCLoad < RTA::Session
   include TPCCHelper
 
@@ -19,6 +25,19 @@ class TPCCLoad < RTA::Session
   @@permutation = Array.new
 
   def setup_first
+    unless config["setup"]["loading_only"]
+      log.info("Create Table")
+      # 接続
+      con = get_connection
+
+      last_warehouse_id = eval(config["warehouse_range"]).last
+      create_table(con, config["setup"]["table_tablespace"],
+                   config["setup"]["partition_count"], last_warehouse_id,
+                   config["setup"]["parallel_degree"])
+
+      con.close
+    end
+
     log.info("TPCC Data Load Started...")
   end
 
@@ -35,10 +54,6 @@ class TPCCLoad < RTA::Session
     # tpcc_password: tpcc
     # tpcc_url: jdbc:oracle:thin:@//192.168.1.5:1521/XE
     # warehouse_range: 1..10
-    config = Hash.new
-    File.open(TPCC_HOME + '/config/config.yml', 'r') do |file|
-      config = YAML.load(file.read)
-    end
     warehouse_range = eval(config["warehouse_range"])
     @first_warehouse_id = warehouse_range.first
     @last_warehouse_id =  warehouse_range.last
@@ -48,15 +63,7 @@ class TPCCLoad < RTA::Session
     end
 
     # 接続
-    begin
-      @con = DriverManager.getConnection(config["tpcc_url"],
-               config["tpcc_user"], config["tpcc_password"])
-      @con.setAutoCommit(false)
-    rescue SQLException => e
-      e.printStackTrace
-    rescue ClassNotFoundException => e
-      e.printStackTrace
-    end
+    @con = get_connection
 
     @stmts = { :item => [], :ware => [], :stock => [], :district => [],
                :cust => [], :ord => [] }
@@ -128,6 +135,26 @@ class TPCCLoad < RTA::Session
 
   def teardown_last
     log.info("...DATA LOADING COMPLETED SUCCESSFULLY.")
+    return if config["setup"]["loading_only"]
+
+    # 接続
+    con = get_connection
+
+    log.info("Create Index")
+    create_index(con, config["setup"]["index_tablespace"],
+                 config["setup"]["partition_count"],
+                 config["setup"]["parallel_degree"])
+
+    log.info("Add Constraint")
+    add_constraint(con)
+
+    log.info("Validate Constraint")
+    validate_constraint(con)
+
+    log.info("Analyze")
+    analyze(con, config["setup"]["parallel_degree"])
+
+    con.close
   end
 
   def load_items
@@ -717,5 +744,781 @@ class TPCCLoad < RTA::Session
     end
     @stmts = { :item => [], :ware => [], :stock => [], :district => [],
                :cust => [], :ord => [] }
+  end
+
+  private
+  def config
+    if @config.nil?
+      @config = Hash.new
+      File.open(TPCC_HOME + '/config/config.yml', 'r') do |file|
+        @config = YAML.load(file.read)
+      end
+    end
+    return @config
+  end
+
+  def get_connection
+    # 接続
+    begin
+      con = DriverManager.getConnection(config["tpcc_url"],
+              config["tpcc_user"], config["tpcc_password"])
+      con.setAutoCommit(false)
+    rescue SQLException => e
+      e.printStackTrace
+    rescue ClassNotFoundException => e
+      e.printStackTrace
+    end
+    return con
+  end
+
+  def create_table(con, tablespace_name, partition_count, last_warehouse_id, parallel_degree)
+    sqls = Array.new
+
+    # warehouse
+    sql = <<-EOS
+      CREATE TABLE warehouse
+      (
+        w_id       NUMBER,       -- 2*W unique IDs
+        w_name     VARCHAR2(10),
+        w_street_1 VARCHAR2(20),
+        w_street_2 VARCHAR2(20),
+        w_city     VARCHAR2(20),
+        w_state    CHAR(2),
+        w_zip      CHAR(9),
+        w_tax      NUMBER(4, 4),
+        w_ytd      NUMBER(12, 2)
+      )
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sql += table_partitioning_clause("w_id", last_warehouse_id,
+                                     partition_count, tablespace_name)
+    sqls << sql
+
+    # district
+    sql = <<-EOS
+      CREATE TABLE district
+      (
+        d_id        NUMBER(2, 0), -- 20 unique IDs
+        d_w_id      NUMBER,       -- 2*W unique IDs
+        d_name      VARCHAR2(10),
+        d_street_1  VARCHAR2(20),
+        d_street_2  VARCHAR2(20),
+        d_city      VARCHAR2(20),
+        d_state     CHAR(2),
+        d_zip       CHAR(9),
+        d_tax       NUMBER(4, 4),
+        d_ytd       NUMBER(12, 2),
+        d_next_o_id NUMBER(8, 0)  -- 10,000,000 unique IDs
+      )
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sql += table_partitioning_clause("d_w_id", last_warehouse_id,
+                                     partition_count, tablespace_name)
+    sqls << sql
+
+    # customer
+    sql = <<-EOS
+      CREATE TABLE customer
+      (
+        c_id           NUMBER(5, 0), -- 96,000 unique IDs
+        c_d_id         NUMBER(2, 0), -- 20 unique IDs
+        c_w_id         NUMBER,       -- 2*W unique IDs
+        c_first        VARCHAR2(16),
+        c_middle       CHAR(2),
+        c_last         VARCHAR2(16),
+        c_street_1     VARCHAR2(20),
+        c_street_2     VARCHAR2(20),
+        c_city         VARCHAR2(20),
+        c_state        CHAR(2),
+        c_zip          CHAR(9),
+        c_phone        CHAR(16),
+        c_since        DATE,
+        c_credit       CHAR(2),
+        c_credit_lim   NUMBER(12, 2),
+        c_discount     NUMBER(4, 4),
+        c_balance      NUMBER(12, 2),
+        c_ytd_payment  NUMBER(12, 2),
+        c_payment_cnt  NUMBER(4, 0),
+        c_delivery_cnt NUMBER(4, 0),
+        c_data         VARCHAR2(500)
+      )
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sql += table_partitioning_clause("c_w_id", last_warehouse_id,
+                                     partition_count, tablespace_name)
+    sqls << sql
+
+    # history
+    sql = <<-EOS
+      CREATE TABLE history
+      (
+        h_c_id   NUMBER(5, 0), -- 96,000 unique IDs
+        h_c_d_id NUMBER(2, 0), -- 20 unique IDs
+        h_c_w_id NUMBER,       -- 2*W unique IDs
+        h_d_id   NUMBER(2, 0), -- 20 unique IDs
+        h_w_id   NUMBER,       -- 2*W unique IDs
+        h_date   DATE,
+        h_amount NUMBER(6, 2),
+        h_data   VARCHAR2(24)
+      )
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sql += table_partitioning_clause("h_w_id", last_warehouse_id,
+                                     partition_count, tablespace_name)
+    sqls << sql
+
+    # new_order
+    sql = <<-EOS
+      CREATE TABLE new_order
+      (
+        no_o_id NUMBER(8, 0), -- 10,000,000 unique IDs
+        no_d_id NUMBER(2, 0), -- 20 unique IDs
+        no_w_id NUMBER        -- 2*W unique IDs
+      )
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sql += table_partitioning_clause("no_w_id", last_warehouse_id,
+                                     partition_count, tablespace_name)
+    sqls << sql
+
+    # orders
+    sql = <<-EOS
+      CREATE TABLE orders
+      (
+        o_id         NUMBER(8, 0), -- 10,000,000 unique IDs
+        o_d_id       NUMBER(2, 0), -- 20 unique IDs
+        o_w_id       NUMBER,       -- 2*W unique IDs
+        o_c_id       NUMBER(5, 0), -- 96,000 unique IDs
+        o_entry_d    DATE,
+        o_carrier_id NUMBER(2, 0), -- 10 unique IDs, or null
+        o_ol_cnt     NUMBER(2, 0),
+        o_all_local  NUMBER(1, 0)
+      )
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sql += table_partitioning_clause("o_w_id", last_warehouse_id,
+                                     partition_count, tablespace_name)
+    sqls << sql
+
+    # order_line
+    sql = <<-EOS
+      CREATE TABLE order_line
+      (
+        ol_o_id        NUMBER(8, 0), -- 10,000,000 unique IDs
+        ol_d_id        NUMBER(2, 0), -- 20 unique IDs
+        ol_w_id        NUMBER,       -- 2*W unique IDs
+        ol_number      NUMBER(2, 0), -- 15 unique IDs
+        ol_i_id        NUMBER(6, 0), -- 200,000 unique IDs
+        ol_supply_w_id NUMBER,       -- 2*W unique IDs
+        ol_delivery_d  DATE,         -- date and time, or null
+        ol_quantity    NUMBER(2, 0),
+        ol_amount      NUMBER(6, 2),
+        ol_dist_info   CHAR(24)
+      )
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sql += table_partitioning_clause("ol_w_id", last_warehouse_id,
+                                     partition_count, tablespace_name)
+    sqls << sql
+
+    # item
+    sql = <<-EOS
+      CREATE TABLE item
+      (
+        i_id    NUMBER(6, 0), -- 200,000 unique IDs
+        i_im_id NUMBER(6, 0), -- 200,000 unique IDs
+        i_name  VARCHAR2(24),
+        i_price NUMBER(5, 2),
+        i_data  VARCHAR2(50)
+      )
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sqls << sql
+
+    # stock
+    sql = <<-EOS
+      CREATE TABLE stock
+      (
+        s_i_id       NUMBER(6, 0), -- 200,000 unique IDs
+        s_w_id       NUMBER,       -- 2*W unique IDs
+        s_quantity   NUMBER(4, 0),
+        s_dist_01    CHAR(24),
+        s_dist_02    CHAR(24),
+        s_dist_03    CHAR(24),
+        s_dist_04    CHAR(24),
+        s_dist_05    CHAR(24),
+        s_dist_06    CHAR(24),
+        s_dist_07    CHAR(24),
+        s_dist_08    CHAR(24),
+        s_dist_09    CHAR(24),
+        s_dist_10    CHAR(24),
+        s_ytd        NUMBER(8, 0),
+        s_order_cnt  NUMBER,
+        s_remote_cnt NUMBER,
+        s_data       VARCHAR2(50)
+      )
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sql += table_partitioning_clause("s_w_id", last_warehouse_id,
+                                     partition_count, tablespace_name)
+    sqls << sql
+
+    sqls.each { |sql| exec_sql(con, sql.chomp.undent) }
+  end
+
+  def create_index(con, tablespace_name, partition_count, parallel_degree)
+    sqls = Array.new
+
+    # warehouse_pk
+    sql = <<-EOS
+      CREATE UNIQUE INDEX warehouse_pk
+        ON warehouse ( w_id )
+    EOS
+    sql += index_partitioning_clause(partition_count)
+    sql += <<-EOS
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sqls << sql
+
+    # district_pk
+    sql = <<-EOS
+      CREATE UNIQUE INDEX district_pk
+        ON district ( d_w_id, d_id )
+    EOS
+    sql += index_partitioning_clause(partition_count)
+    sql += <<-EOS
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sqls << sql
+
+    # customer_pk
+    sql = <<-EOS
+      CREATE UNIQUE INDEX customer_pk
+        ON customer ( c_w_id, c_d_id, c_id )
+    EOS
+    sql += index_partitioning_clause(partition_count)
+    sql += <<-EOS
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sqls << sql
+
+    # new_order_pk
+    sql = <<-EOS
+      CREATE UNIQUE INDEX new_order_pk
+        ON new_order ( no_w_id, no_d_id, no_o_id )
+    EOS
+    sql += index_partitioning_clause(partition_count)
+    sql += <<-EOS
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sqls << sql
+
+    # orders_pk
+    sql = <<-EOS
+      CREATE UNIQUE INDEX orders_pk
+        ON orders ( o_w_id, o_d_id, o_id )
+    EOS
+    sql += index_partitioning_clause(partition_count)
+    sql += <<-EOS
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sqls << sql
+
+    # order_line_pk
+    sql = <<-EOS
+      CREATE UNIQUE INDEX order_line_pk
+        ON order_line ( ol_w_id, ol_d_id, ol_o_id, ol_number )
+    EOS
+    sql += index_partitioning_clause(partition_count)
+    sql += <<-EOS
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sqls << sql
+
+    # item_pk
+    sql = <<-EOS
+      CREATE UNIQUE INDEX item_pk
+        ON item ( i_id )
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sqls << sql
+
+    # stock_pk
+    sql = <<-EOS
+      CREATE UNIQUE INDEX stock_pk
+        ON stock ( s_w_id, s_i_id )
+    EOS
+    sql += index_partitioning_clause(partition_count)
+    sql += <<-EOS
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sqls << sql
+
+    # Additional index
+    # customer_idx
+    sql = <<-EOS
+      CREATE UNIQUE INDEX customer_idx
+        ON customer ( c_last, c_w_id, c_d_id, c_first, c_id )
+    EOS
+    sql += index_partitioning_clause(partition_count)
+    sql += <<-EOS
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sqls << sql
+
+    # orders_idx
+    sql = <<-EOS
+      CREATE UNIQUE INDEX orders_idx
+        ON orders ( o_c_id, o_d_id, o_w_id, o_id )
+    EOS
+    sql += index_partitioning_clause(partition_count)
+    sql += <<-EOS
+      TABLESPACE #{tablespace_name}
+      PARALLEL #{parallel_degree}
+    EOS
+    sqls << sql
+
+    sqls.each { |sql| exec_sql(con, sql.chomp.undent) }
+  end
+
+  def add_constraint(con)
+    sqls = Array.new
+
+    # Primary key
+    sql = <<-EOS
+      ALTER TABLE warehouse ADD CONSTRAINT warehouse_pk
+        PRIMARY KEY ( w_id )
+        USING INDEX warehouse_pk
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE district ADD CONSTRAINT district_pk
+        PRIMARY KEY ( d_w_id, d_id )
+        USING INDEX district_pk
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE customer ADD CONSTRAINT customer_pk
+        PRIMARY KEY ( c_w_id, c_d_id, c_id )
+        USING INDEX customer_pk
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE new_order ADD CONSTRAINT new_order_pk
+        PRIMARY KEY ( no_w_id, no_d_id, no_o_id )
+        USING INDEX new_order_pk
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE orders ADD CONSTRAINT orders_pk
+        PRIMARY KEY ( o_w_id, o_d_id, o_id )
+        USING INDEX orders_pk
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE order_line ADD CONSTRAINT order_line_pk
+        PRIMARY KEY ( ol_w_id, ol_d_id, ol_o_id, ol_number )
+        USING INDEX order_line_pk
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE item ADD CONSTRAINT item_pk
+        PRIMARY KEY ( i_id )
+        USING INDEX item_pk
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE stock ADD CONSTRAINT stock_pk
+        PRIMARY KEY ( s_w_id, s_i_id )
+        USING INDEX stock_pk
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    # Foreign key
+    sql = <<-EOS
+      ALTER TABLE district ADD CONSTRAINT district_fk
+        FOREIGN KEY ( d_w_id )
+        REFERENCES warehouse ( w_id )
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE customer ADD CONSTRAINT customer_fk
+        FOREIGN KEY ( c_w_id, c_d_id )
+        REFERENCES district ( d_w_id, d_id )
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE history ADD CONSTRAINT history_fk1
+        FOREIGN KEY ( h_c_w_id, h_c_d_id, h_c_id )
+        REFERENCES customer ( c_w_id, c_d_id, c_id )
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE history ADD CONSTRAINT history_fk2
+        FOREIGN KEY ( h_w_id, h_d_id )
+        REFERENCES district ( d_w_id, d_id )
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE new_order ADD CONSTRAINT new_order_fk
+        FOREIGN KEY ( no_w_id, no_d_id, no_o_id )
+        REFERENCES orders ( o_w_id, o_d_id, o_id )
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE orders ADD CONSTRAINT orders_fk
+        FOREIGN KEY ( o_w_id, o_d_id, o_c_id )
+        REFERENCES customer ( c_w_id, c_d_id, c_id )
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE order_line ADD CONSTRAINT order_line_fk1
+        FOREIGN KEY ( ol_w_id, ol_d_id, ol_o_id )
+        REFERENCES orders ( o_w_id, o_d_id, o_id )
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE order_line ADD CONSTRAINT order_line_fk2
+        FOREIGN KEY ( ol_supply_w_id, ol_i_id )
+        REFERENCES stock ( s_w_id, s_i_id )
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE stock ADD CONSTRAINT stock_fk1
+        FOREIGN KEY ( s_w_id )
+        REFERENCES warehouse ( w_id )
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE stock ADD CONSTRAINT stock_fk2
+        FOREIGN KEY ( s_i_id )
+        REFERENCES item ( i_id )
+        ENABLE NOVALIDATE
+    EOS
+    sqls << sql
+
+    sqls.each { |sql| exec_sql(con, sql.chomp.undent) }
+  end
+
+  def validate_constraint(con)
+    sqls = Array.new
+
+    # Primary key
+    sql = <<-EOS
+      ALTER TABLE district
+      MODIFY CONSTRAINT district_pk VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE customer
+      MODIFY CONSTRAINT customer_pk VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE new_order
+      MODIFY CONSTRAINT new_order_pk VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE orders
+      MODIFY CONSTRAINT orders_pk VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE order_line
+      MODIFY CONSTRAINT order_line_pk VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE item
+      MODIFY CONSTRAINT item_pk VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE stock
+      MODIFY CONSTRAINT stock_pk VALIDATE
+    EOS
+    sqls << sql
+
+    # Foreign key
+    sql = <<-EOS
+      ALTER TABLE district
+      MODIFY CONSTRAINT district_fk VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE customer
+      MODIFY CONSTRAINT customer_fk VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE history
+      MODIFY CONSTRAINT history_fk1 VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE history
+      MODIFY CONSTRAINT history_fk2 VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE new_order
+      MODIFY CONSTRAINT new_order_fk VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE orders
+      MODIFY CONSTRAINT orders_fk VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE order_line
+      MODIFY CONSTRAINT order_line_fk1 VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE order_line
+      MODIFY CONSTRAINT order_line_fk2 VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE stock
+      MODIFY CONSTRAINT stock_fk1 VALIDATE
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      ALTER TABLE stock
+      MODIFY CONSTRAINT stock_fk2 VALIDATE
+    EOS
+    sqls << sql
+
+    sqls.each { |sql| exec_sql(con, sql.chomp.undent) }
+  end
+
+  def analyze(con, parallel_degree)
+    sqls = Array.new
+
+    sql = <<-EOS
+      DECLARE
+        username USER_USERS.USERNAME%TYPE;
+      BEGIN
+        SELECT USERNAME into username FROM USER_USERS;
+        DBMS_STATS.GATHER_TABLE_STATS(ownname => username,
+                                      tabname => 'WAREHOUSE',
+                                      degree  => #{parallel_degree},
+                                      cascade => true);
+      END;
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      DECLARE
+        username USER_USERS.USERNAME%TYPE;
+      BEGIN
+        SELECT USERNAME into username FROM USER_USERS;
+        DBMS_STATS.GATHER_TABLE_STATS(ownname => username,
+                                      tabname => 'DISTRICT',
+                                      degree  => #{parallel_degree},
+                                      cascade => true);
+      END;
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      DECLARE
+        username USER_USERS.USERNAME%TYPE;
+      BEGIN
+        SELECT USERNAME into username FROM USER_USERS;
+        DBMS_STATS.GATHER_TABLE_STATS(ownname => username,
+                                      tabname => 'CUSTOMER',
+                                      degree  => #{parallel_degree},
+                                      cascade => true);
+      END;
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      DECLARE
+        username USER_USERS.USERNAME%TYPE;
+      BEGIN
+        SELECT USERNAME into username FROM USER_USERS;
+        DBMS_STATS.GATHER_TABLE_STATS(ownname => username,
+                                      tabname => 'HISTORY',
+                                      degree  => #{parallel_degree},
+                                      cascade => true);
+      END;
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      DECLARE
+        username USER_USERS.USERNAME%TYPE;
+      BEGIN
+        SELECT USERNAME into username FROM USER_USERS;
+        DBMS_STATS.GATHER_TABLE_STATS(ownname => username,
+                                      tabname => 'NEW_ORDER',
+                                      degree  => #{parallel_degree},
+                                      cascade => true);
+      END;
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      DECLARE
+        username USER_USERS.USERNAME%TYPE;
+      BEGIN
+        SELECT USERNAME into username FROM USER_USERS;
+        DBMS_STATS.GATHER_TABLE_STATS(ownname => username,
+                                      tabname => 'ORDERS',
+                                      degree  => #{parallel_degree},
+                                      cascade => true);
+      END;
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      DECLARE
+        username USER_USERS.USERNAME%TYPE;
+      BEGIN
+        SELECT USERNAME into username FROM USER_USERS;
+        DBMS_STATS.GATHER_TABLE_STATS(ownname => username,
+                                      tabname => 'ORDER_LINE',
+                                      degree  => #{parallel_degree},
+                                      cascade => true);
+      END;
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      DECLARE
+        username USER_USERS.USERNAME%TYPE;
+      BEGIN
+        SELECT USERNAME into username FROM USER_USERS;
+        DBMS_STATS.GATHER_TABLE_STATS(ownname => username,
+                                      tabname => 'ITEM',
+                                      degree  => #{parallel_degree},
+                                      cascade => true);
+      END;
+    EOS
+    sqls << sql
+
+    sql = <<-EOS
+      DECLARE
+        username USER_USERS.USERNAME%TYPE;
+      BEGIN
+        SELECT USERNAME into username FROM USER_USERS;
+        DBMS_STATS.GATHER_TABLE_STATS(ownname => username,
+                                      tabname => 'STOCK',
+                                      degree  => #{parallel_degree},
+                                      cascade => true);
+      END;
+    EOS
+    sqls << sql
+
+    sqls.each { |sql| exec_sql(con, sql.chomp.undent) }
+  end
+
+  def table_partitioning_clause(partition_key, num_key_rows, partition_count, tablespace_name)
+    return "" if partition_count == 0
+
+    rows_per_partition = (num_key_rows / partition_count.to_f).ceil
+    return "" if rows_per_partition == 0
+
+    ret = "      PARTITION BY RANGE(#{partition_key})\n" +
+          "      (\n"
+    value = 1 + rows_per_partition
+    1.upto(partition_count) do |n|
+      partition_name = sprintf("p%0#{partition_count.to_s.size}d", n)
+      ret += "        PARTITION #{partition_name} VALUES LESS THAN (#{value}) TABLESPACE #{tablespace_name}#{n == partition_count ? "" : ","}" + "\n"
+      value += rows_per_partition
+    end
+    ret += "      )\n"
+
+    return ret
+  end
+
+  def index_partitioning_clause(partition_count)
+    return partition_count >= 0 ? "      LOCAL\n" : ""
+  end
+
+  def exec_sql(con, sql)
+    self.log.info(sql_log_str(sql))
+    stmt = nil
+    begin
+      stmt = con.createStatement
+      stmt.executeUpdate(sql)
+    ensure
+      stmt.close if stmt
+    end
+  end
+
+  def sql_log_str(sql)
+    return ("SQL> " + sql + "\n/").each_line.map { |x| "     " + x }.join.lstrip
   end
 end

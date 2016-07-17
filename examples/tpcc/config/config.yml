@@ -30,3 +30,10 @@ avoid_deadlock: true
 get_connection_everytime: false
 use_bind_variables: true
 statement_cache_size: 50
+
+setup:
+  table_tablespace: USERS
+  index_tablespace: USERS
+  partition_count: 3
+  parallel_degree: 3
+  loading_only: true

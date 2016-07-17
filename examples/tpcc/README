@@ -21,12 +21,12 @@ TPC-C[http://www.tpc.org/tpcc/] Standard Specification Version 5.11 を実装.
      SQL> ALTER USER tpcc ACCOUNT UNLOCK;
      SQL> GRANT connect, resource TO tpcc;
 
-2. config/config.sh, config/config.yml を環境に合わせて変更
+2. config/config.yml を環境に合わせて変更
 
-3. script/setup.sh を実行
-     $ script/setup.sh
+3. script/setup.rb を実行
+     $ rtactl -p 9000 -n 5 start script/setup.rb
 
-4. config.sh 中で指定したログ(SETUP_LOG で指定)にエラーが無いか確認
+4. setup.rb の出力にエラーが無いか確認
 
 === Run Test
 
@@ -48,12 +48,12 @@ tpcc.rb を RTA から実行します.
 
 作成したオブジェクト(表, 索引, 制約など)を削除します.
 
-1. config/config.sh を環境に合わせて変更
+1. config/config.yml を環境に合わせて変更
 
-2. script/teardown.sh を実行
-     $ script/teardown.sh
+2. script/teardown.rb を実行
+     $ rtactl -p 9000 start script/teardown.rb
 
-3. config.sh 中で指定したログ(TEARDOWN_LOG で指定)にエラーが無いか確認
+3. teardown.rb の出力にエラーが無いか確認
 
 4. 必要に応じて DB 上からスキーマを削除
      SQL> DROP USER tpcc;

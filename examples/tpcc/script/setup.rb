@@ -13,7 +13,7 @@ class String
   end
 end
 
-class TPCCLoad < RTA::Session
+class TPCCSetup < RTA::Session
   include TPCCHelper
 
   INSERTS_PER_COMMIT = 100
@@ -43,7 +43,7 @@ class TPCCLoad < RTA::Session
 
   def setup
     # ログ
-    # self.log = RTA::Log.new(TPCC_HOME + "/log/load_#{@session_id}.log")
+    # self.log = RTA::Log.new(TPCC_HOME + "/log/setup_#{@session_id}.log")
     # self.log.level = RTA::Log::DEBUG
 
     # config.yml の例

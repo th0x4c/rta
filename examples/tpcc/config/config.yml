@@ -1,4 +1,4 @@
-# Configuration for load and tpcc script
+# Configuration for setup, load, teardown and tpcc script
 
 tpcc_user: tpcc
 tpcc_password: tpcc
@@ -36,4 +36,4 @@ setup:
   index_tablespace: USERS
   partition_count: 3
   parallel_degree: 3
-  loading_only: true
+  loading_only: false

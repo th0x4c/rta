@@ -46,8 +46,8 @@ class TPCH < RTA::Session
     tx_load = RTA::Transaction.new("tpch load") do
       create_directory(@con, config["os_directory"])
       create_external_table(@con, config["parallel_degree"])
-      create_table(@con, config["parallel_degree"], config["table_tablespace"], config["subpartition_count"])
-      create_index(@con, config["parallel_degree"], config["index_tablespace"])
+      create_table(@con, config["parallel_degree"], config["table_tablespace"], config["partitioning"], config["subpartition_count"])
+      create_index(@con, config["parallel_degree"], config["index_tablespace"], config["partitioning"])
       analyze(@con, config["parallel_degree"], config["tpch_user"])
     end
 
@@ -315,7 +315,7 @@ class TPCH < RTA::Session
     EOS
   end
 
-  def create_table(con, parallel_degree, tablespace_name, subpartition_count)
+  def create_table(con, parallel_degree, tablespace_name, partitioning, subpartition_count)
     sqls = Array.new
 
     # lineitem
@@ -343,27 +343,30 @@ class TPCH < RTA::Session
       NOLOGGING
       COMPRESS
       TABLESPACE #{tablespace_name}
-      PARTITION BY RANGE (l_shipdate)
     EOS
-    if subpartition_count > 0
-      sql += "      SUBPARTITION BY HASH (l_partkey)\n" +
-             "      SUBPARTITIONS #{subpartition_count}\n"
-    end
-    sql += "      (\n"
 
-    # from 1992-01-01 to 1998-11-01
-    part_dates = (1992..1998).map do |year|
-                   (1..12).map do |month|
-                     sprintf("%4d-%02d-01", year, month)
-                   end
-                 end.flatten[0..-2]
-    part_dates.each_with_index do |part_date, i|
-      sql += "        PARTITION item#{i + 1} VALUES LESS THAN (TO_DATE('#{part_date}', 'YYYY-MM-DD')),\n"
+    if partitioning
+      sql += "      PARTITION BY RANGE (l_shipdate)\n"
+      if subpartition_count > 0
+        sql += "      SUBPARTITION BY HASH (l_partkey)\n" +
+               "      SUBPARTITIONS #{subpartition_count}\n"
+      end
+      sql += "      (\n"
+
+      # from 1992-01-01 to 1998-11-01
+      part_dates = (1992..1998).map do |year|
+                     (1..12).map do |month|
+                       sprintf("%4d-%02d-01", year, month)
+                     end
+                   end.flatten[0..-2]
+      part_dates.each_with_index do |part_date, i|
+        sql += "        PARTITION item#{i + 1} VALUES LESS THAN (TO_DATE('#{part_date}', 'YYYY-MM-DD')),\n"
+      end
+      sql += "        PARTITION item#{part_dates.size + 1} VALUES LESS THAN (MAXVALUE)\n"
+      sql += "      )\n"
     end
 
     sql += <<-EOS
-        PARTITION item#{part_dates.size + 1} VALUES LESS THAN (MAXVALUE)
-      )
       AS SELECT
         TO_DATE(l_shipdate, 'YYYY-MM-DD'),
         l_orderkey,
@@ -405,27 +408,30 @@ class TPCH < RTA::Session
       NOLOGGING
       COMPRESS
       TABLESPACE #{tablespace_name}
-      PARTITION BY RANGE (o_orderdate)
     EOS
-    if subpartition_count > 0
-      sql += "      SUBPARTITION BY HASH (o_custkey)\n" +
-             "      SUBPARTITIONS #{subpartition_count}\n"
-    end
-    sql += "      (\n"
 
-    # from 1992-01-01 to 1998-08-01
-    part_dates = (1992..1998).map do |year|
-                   (1..12).map do |month|
-                     sprintf("%4d-%02d-01", year, month)
-                   end
-                 end.flatten[0..-5]
-    part_dates.each_with_index do |part_date, i|
-      sql += "        PARTITION ord#{i + 1} VALUES LESS THAN (TO_DATE('#{part_date}', 'YYYY-MM-DD')),\n"
+    if partitioning
+      sql += "      PARTITION BY RANGE (o_orderdate)\n"
+      if subpartition_count > 0
+        sql += "      SUBPARTITION BY HASH (o_custkey)\n" +
+               "      SUBPARTITIONS #{subpartition_count}\n"
+      end
+      sql += "      (\n"
+
+      # from 1992-01-01 to 1998-08-01
+      part_dates = (1992..1998).map do |year|
+                     (1..12).map do |month|
+                       sprintf("%4d-%02d-01", year, month)
+                     end
+                   end.flatten[0..-5]
+      part_dates.each_with_index do |part_date, i|
+        sql += "        PARTITION ord#{i + 1} VALUES LESS THAN (TO_DATE('#{part_date}', 'YYYY-MM-DD')),\n"
+      end
+      sql += "        PARTITION ord#{part_dates.size + 1} VALUES LESS THAN (MAXVALUE)\n"
+      sql += "      )\n"
     end
 
     sql += <<-EOS
-        PARTITION ord#{part_dates.size + 1} VALUES LESS THAN (MAXVALUE)
-      )
       AS SELECT
         TO_DATE(o_orderdate, 'YYYY-MM-DD'),
         o_orderkey,
@@ -456,8 +462,9 @@ class TPCH < RTA::Session
       NOLOGGING
       COMPRESS
       TABLESPACE #{tablespace_name}
-      PARTITION BY HASH (ps_partkey)
-      PARTITIONS #{parallel_degree}
+    EOS
+    sql += table_hash_partitioning_clause('ps_partkey', parallel_degree) if partitioning
+    sql += <<-EOS
       AS SELECT
         ps_partkey,
         ps_suppkey,
@@ -486,8 +493,9 @@ class TPCH < RTA::Session
       NOLOGGING
       COMPRESS
       TABLESPACE #{tablespace_name}
-      PARTITION BY HASH (p_partkey)
-      PARTITIONS #{parallel_degree}
+    EOS
+    sql += table_hash_partitioning_clause('p_partkey', parallel_degree) if partitioning
+    sql += <<-EOS
       AS SELECT
         p_partkey,
         p_type,
@@ -519,8 +527,9 @@ class TPCH < RTA::Session
       NOLOGGING
       COMPRESS
       TABLESPACE #{tablespace_name}
-      PARTITION BY HASH (c_custkey)
-      PARTITIONS #{parallel_degree}
+    EOS
+    sql += table_hash_partitioning_clause('c_custkey', parallel_degree) if partitioning
+    sql += <<-EOS
       AS SELECT
         c_custkey,
         c_mktsegment,
@@ -550,8 +559,9 @@ class TPCH < RTA::Session
       NOLOGGING
       COMPRESS
       TABLESPACE #{tablespace_name}
-      PARTITION BY HASH (s_suppkey)
-      PARTITIONS #{parallel_degree}
+    EOS
+    sql += table_hash_partitioning_clause('s_suppkey', parallel_degree) if partitioning
+    sql += <<-EOS
       AS SELECT
         s_suppkey,
         s_nationkey,
@@ -598,14 +608,20 @@ class TPCH < RTA::Session
     sqls.each { |sql| exec_sql(con, sql.chomp.undent) }
   end
 
-  def create_index(con, parallel_degree, tablespace_name)
+  def table_hash_partitioning_clause(partition_key, partition_count)
+    return "      PARTITION BY HASH (#{partition_key})\n" +
+           "      PARTITIONS #{partition_count}\n"
+  end
+
+  def create_index(con, parallel_degree, tablespace_name, partitioning)
     sqls = Array.new
 
     sql = <<-EOS
       CREATE INDEX i_l_orderkey
       ON lineitem (l_orderkey)
-      GLOBAL PARTITION BY HASH (l_orderkey)
-      PARTITIONS #{parallel_degree}
+    EOS
+    sql += index_hash_partitioning_clause('l_orderkey', parallel_degree) if partitioning
+    sql += <<-EOS
       TABLESPACE #{tablespace_name}
       PARALLEL #{parallel_degree}
       COMPUTE STATISTICS
@@ -616,8 +632,9 @@ class TPCH < RTA::Session
     sql = <<-EOS
       CREATE UNIQUE INDEX i_o_orderkey
       ON orders (o_orderkey)
-      GLOBAL PARTITION BY HASH (o_orderkey)
-      PARTITIONS #{parallel_degree}
+    EOS
+    sql += index_hash_partitioning_clause('o_orderkey', parallel_degree) if partitioning
+    sql += <<-EOS
       TABLESPACE #{tablespace_name}
       PARALLEL #{parallel_degree}
       COMPUTE STATISTICS
@@ -638,8 +655,9 @@ class TPCH < RTA::Session
     sql = <<-EOS
       CREATE UNIQUE INDEX ps_pkey_skey
       ON partsupp (ps_partkey,ps_suppkey)
-      GLOBAL PARTITION BY HASH (ps_partkey)
-      PARTITIONS #{parallel_degree}
+    EOS
+    sql += index_hash_partitioning_clause('ps_partkey', parallel_degree) if partitioning
+    sql += <<-EOS
       TABLESPACE #{tablespace_name}
       PARALLEL #{parallel_degree}
       COMPUTE STATISTICS
@@ -648,6 +666,11 @@ class TPCH < RTA::Session
     sqls << sql
 
     sqls.each { |sql| exec_sql(con, sql.chomp.undent) }
+  end
+
+  def index_hash_partitioning_clause(partition_key, partition_count)
+    return "      GLOBAL PARTITION BY HASH (#{partition_key})\n" +
+           "      PARTITIONS #{partition_count}\n"
   end
 
   def analyze(con, parallel_degree, schema)

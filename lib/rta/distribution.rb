@@ -28,7 +28,8 @@ module RTA
     # @return [Float]
     def percentile(percent)
       accum = @bins.inject(Array.new) { |result, n| result << result[-1].to_i + n.to_i }
-      return accum.find_index { |x| x * 100 / total_count >= percent } * WIDTH
+      total = total_count
+      return accum.find_index { |x| x * 100 / total >= percent } * WIDTH
     end
 
     # {Distribution} 同士の実行時間分布を加えて新たな {Distribution}

@@ -29,7 +29,7 @@ module RTA
     def percentile(percent)
       accum = @bins.inject(Array.new) { |result, n| result << result[-1].to_i + n.to_i }
       total = total_count
-      return accum.find_index { |x| x * 100 / total >= percent } * WIDTH
+      return accum.find_index { |x| x * 100 / total >= percent }.to_i * WIDTH
     end
 
     # {Distribution} 同士の実行時間分布を加えて新たな {Distribution}

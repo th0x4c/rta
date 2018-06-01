@@ -1486,17 +1486,14 @@ class TPCCSetup < RTA::Session
 
   def table_partitioning_clause(partition_key, num_key_rows, partition_count, tablespace_name)
     return "" if partition_count == 0
-
-    rows_per_partition = (num_key_rows / partition_count.to_f).ceil
-    return "" if rows_per_partition == 0
+    return "" if num_key_rows / partition_count == 0
 
     ret = "      PARTITION BY RANGE(#{partition_key})\n" +
           "      (\n"
-    value = 1 + rows_per_partition
     1.upto(partition_count) do |n|
       partition_name = sprintf("p%0#{partition_count.to_s.size}d", n)
+      value = num_key_rows * n / partition_count + 1
       ret += "        PARTITION #{partition_name} VALUES LESS THAN (#{value}) TABLESPACE #{tablespace_name}#{n == partition_count ? "" : ","}" + "\n"
-      value += rows_per_partition
     end
     ret += "      )\n"
 

@@ -259,6 +259,7 @@ describe RTA::SessionManager do
 
   describe "#stop_session_count" do
     it "should return a number of stop sessions" do
+      @ex_session_mock.stub(:run)
       @ex_session_mock.stub(:status).and_return(RTA::Session::STOP, RTA::Session::GO)
       @session_manager.run
       @session_manager.stop_session_count.should == 1

@@ -28,24 +28,24 @@ describe RTA::Controller::Option do
 
     it "should show help and exit if command is not specified" do
       STDERR.should_receive(:puts).with(/#{Regexp.quote(RTA::Controller::BANNER)}/)
-      lambda { @option.parse(EX_ARGV - ["start", "example.rb"]) }.should raise_error
+      lambda { @option.parse(EX_ARGV - ["start", "example.rb"]) }.should raise_error(SystemExit) { |e| e.status.should == 1 }
     end
 
     it "should show help and exit if command is invalid" do
       STDERR.should_receive(:puts).with(/#{Regexp.quote(RTA::Controller::BANNER)}/)
-      lambda { @option.parse(EX_ARGV - ["start", "example.rb"] + ["invalid_command"]) }.should raise_error
+      lambda { @option.parse(EX_ARGV - ["start", "example.rb"] + ["invalid_command"]) }.should raise_error(SystemExit) { |e| e.status.should == 1 }
     end
 
     it "should show help and exit if option is invalid" do
       STDERR.should_receive(:puts).with(/#{Regexp.quote(RTA::Controller::BANNER)}/)
-      lambda { @option.parse(EX_ARGV + ["--invalid_option"]) }.should raise_error
+      lambda { @option.parse(EX_ARGV + ["--invalid_option"]) }.should raise_error(SystemExit) { |e| e.status.should == 1 }
     end
 
     it "should show help and exit if file with \"start\" command does not exist" do
       STDERR.should_receive(:puts).with(/#{Regexp.quote(RTA::Controller::BANNER)}/)
       no_exist_file_name = "no_exist_file.rb"
       FileTest.stub(:exist?).with(no_exist_file_name).and_return(false)
-      lambda { @option.parse(EX_ARGV - ["example.rb"] + [no_exist_file_name]) }.should raise_error
+      lambda { @option.parse(EX_ARGV - ["example.rb"] + [no_exist_file_name]) }.should raise_error(SystemExit) { |e| e.status.should == 1 }
     end
 
     it "should accept -p as port number" do

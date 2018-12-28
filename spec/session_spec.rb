@@ -95,7 +95,7 @@ describe RTA::Session do
       end
       sleep 1
       @session.status.should == RTA::Session::STANDBY
-      thread.alive?.should be_true
+      thread.alive?.should be true
       thread.kill if thread.alive?
     end
 
@@ -106,7 +106,7 @@ describe RTA::Session do
       end
       sleep 1
       @session.status.should == RTA::Session::GO
-      thread.alive?.should be_true
+      thread.alive?.should be true
       thread.kill if thread.alive?
     end
 
@@ -119,7 +119,7 @@ describe RTA::Session do
       @session.stop
       sleep 0.5
       @session.status.should == RTA::Session::STOP
-      thread.alive?.should_not be_true
+      thread.alive?.should be false
       thread.kill if thread.alive?
     end
 

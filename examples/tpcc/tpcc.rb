@@ -365,7 +365,7 @@ class TPCC < RTA::Session
       qty = Array.new
       home = true
       ol_cnt.times do |idx|
-        if idx == ol_cnt -1 && rbk == 1
+        if idx == ol_cnt - 1 && rbk == 1
           ol_i_id = UNUSED_I_ID
         else
           ol_i_id = nurand(8191, 1, MAXITEMS)

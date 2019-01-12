@@ -104,7 +104,7 @@ module RTA
         percent_str = String.new
         percent_str = time.strftime("%m-%d %X") + "|"
         percent = diff.tps * 100 / max_graph
-        100.times { |i| percent_str << ((i >= percent -1 && i < percent) ? "*" : " ") }
+        100.times { |i| percent_str << ((i >= percent - 1 && i < percent) ? "*" : " ") }
         percent_str << sprintf(" %#{max_graph.to_s.size + 3}.2f tps / %#{max_count.to_s.size}d",
                                diff.tps, diff.count)
         tp << percent_str

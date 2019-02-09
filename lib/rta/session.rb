@@ -468,7 +468,7 @@ module RTA
     #
     # @param [Number] port ポート番号
     def start_service(port)
-      DRb.start_service("druby://localhost:#{port}", self)
+      DRb.start_service("druby://0.0.0.0:#{port}", self)
       wait
       stop_service
     end

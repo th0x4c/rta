@@ -167,7 +167,10 @@ module RTA
     def stat_by_name(name, sess = sessions, phase = :tx, period = :measurement)
       ts = RTA::TransactionStatistic.new
       sess.each do |ses|
-        ts += ses.transactions.find { |tx| tx.name == name }.stat(phase, period)
+        ses_stat_by_name = ses.transactions.find_all { |tx| tx.name == name }
+                              .map { |tx| tx.stat(phase, period) }
+                              .inject(:+)
+        ts += ses_stat_by_name unless ses_stat_by_name.nil?
       end
       ts.name = name
       return ts

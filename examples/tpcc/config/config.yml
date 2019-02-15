@@ -37,3 +37,8 @@ setup:
   partition_count: 3
   parallel_degree: 3
   loading_only: false
+
+remote:
+  - 192.168.1.6:9000
+  - 192.168.1.7:9000
+  - 192.168.1.8:9000

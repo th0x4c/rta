@@ -468,6 +468,7 @@ module RTA
     #
     # @param [Number] port ポート番号
     def start_service(port)
+      @drb_client_count = 0
       DRb.start_service("druby://0.0.0.0:#{port}", self)
       wait
       stop_service
@@ -475,6 +476,7 @@ module RTA
 
     # 分散オブジェクト(dRuby) のサービス停止
     def stop_service
+      sleep 0.01 while @drb_client_count > 0
       DRb.stop_service
     end
 
@@ -589,6 +591,16 @@ module RTA
         ses.period_target(start_time, rampup_interval, measurement_interval,
                           rampdown_interval)
       end
+    end
+
+    # 分散オブジェクト(dRuby) のサービスを利用しているクライアント数を増加
+    def increment_drb_client
+      @drb_client_count += 1
+    end
+
+    # 分散オブジェクト(dRuby) のサービスを利用しているクライアント数を減少
+    def decrement_drb_client
+      @drb_client_count -= 1
     end
   end
 end

@@ -32,11 +32,12 @@ module RTA
     def run(target, &block)
       pre_stat = nil
 
+      time = Time.now
       while @status == :go
-        sleep INTERVAL unless @count == 0
+        sleep [INTERVAL + (time - Time.now), 0].max unless @count == 0
 
-        stat = block ? block.call(target) : target.stat
         time = Time.now
+        stat = block ? block.call(target) : target.stat
         diff_stat = (pre_stat && pre_stat.count > 0) ? stat - pre_stat : stat
 
         out = Array.new

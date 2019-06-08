@@ -1501,7 +1501,7 @@ class TPCCSetup < RTA::Session
   end
 
   def index_partitioning_clause(partition_count)
-    return partition_count >= 0 ? "      LOCAL\n" : ""
+    return partition_count > 0 ? "      LOCAL\n" : ""
   end
 
   def exec_sql(con, sql)

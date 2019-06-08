@@ -62,11 +62,21 @@ class SessionManagerSession < RTA::Session
 
   def setup_last
     @@monitor.start(self) do |ses|
-      stat = ses.stat_by_name("New-Order", sessions, :tx, :rampup) +
-             ses.stat_by_name("New-Order", sessions, :tx, :measurement) +
-             ses.stat_by_name("New-Order", sessions, :tx, :rampdown)
-      stat.name = "New-Order"
-      stat
+      begin
+        retry_count ||= 0
+        stat = ses.stat_by_name("New-Order", sessions, :tx, :rampup) +
+               ses.stat_by_name("New-Order", sessions, :tx, :measurement) +
+               ses.stat_by_name("New-Order", sessions, :tx, :rampdown)
+        stat.name = "New-Order"
+        stat
+      rescue => e
+        retry_count += 1
+        if retry_count < 5
+          retry
+        else
+          raise e
+        end
+      end
     end
   end
 

@@ -4,6 +4,9 @@ OS_HOSTNAME=sv1.local
 OS_USER=oracle
 OS_DIRECTORY=/home/oracle/rta_tpch
 
+OS_PASSWORD=welcome1
+SSHPASS="sshpass -p $OS_PASSWORD"
+
 TPCH_DBGEN_ZIP=tpch_2_16_1.zip
 TPCH_DBGEN_URL=http://www.tpc.org/tpch/spec/$TPCH_DBGEN_ZIP
 

@@ -29,7 +29,7 @@ make_dbgen()
 EOF
 `
 
-  ssh -l $OS_USER $OS_HOSTNAME $cmd
+  $SSHPASS ssh -l $OS_USER $OS_HOSTNAME $cmd
 }
 
 setup_dbgen()
@@ -39,9 +39,9 @@ setup_dbgen()
     get_dbgen
   fi
 
-  ssh -l $OS_USER $OS_HOSTNAME mkdir -p $OS_DIRECTORY
+  $SSHPASS ssh -l $OS_USER $OS_HOSTNAME mkdir -p $OS_DIRECTORY
 
-  scp $TPCH_HOME/$TPCH_DBGEN_ZIP ${OS_USER}@${OS_HOSTNAME}:${OS_DIRECTORY}
+  $SSHPASS scp $TPCH_HOME/$TPCH_DBGEN_ZIP ${OS_USER}@${OS_HOSTNAME}:${OS_DIRECTORY}
 
   make_dbgen
 }
@@ -64,7 +64,7 @@ generate_data()
                mv ./*.tbl* $OS_DIRECTORY
 EOF
 `
-  ssh -l $OS_USER $OS_HOSTNAME $cmd
+  $SSHPASS ssh -l $OS_USER $OS_HOSTNAME $cmd
 }
 
 setup_dbgen

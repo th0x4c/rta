@@ -27,7 +27,7 @@ generate_data_for_refresh_function ()
                mv ./*.tbl.u* ./delete.* $OS_DIRECTORY
 EOF
 `
-  ssh -l $OS_USER $OS_HOSTNAME $cmd
+  $SSHPASS ssh -l $OS_USER $OS_HOSTNAME $cmd
 }
 
 generate_query()
@@ -46,12 +46,12 @@ generate_query()
 EOF
 `
 
-  ssh -l $OS_USER $OS_HOSTNAME $cmd
+  $SSHPASS ssh -l $OS_USER $OS_HOSTNAME $cmd
 }
 
 get_query()
 {
-  scp -r ${OS_USER}@${OS_HOSTNAME}:${OS_DIRECTORY}/query $TPCH_HOME
+  $SSHPASS scp -r ${OS_USER}@${OS_HOSTNAME}:${OS_DIRECTORY}/query $TPCH_HOME
 }
 
 generate_data_for_refresh_function

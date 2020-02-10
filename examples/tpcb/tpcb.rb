@@ -50,6 +50,7 @@ class TPCB < RTA::Session
     end
     branch_range = eval(config["branch_range"])
     @last_branch_id = branch_range.last
+    self.log.level = RTA::Log.const_get("RTA::Log::#{config["log_level"].upcase}") if config["log_level"]
 
     # 接続
     begin

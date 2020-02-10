@@ -77,6 +77,7 @@ class TPCC < RTA::Session
     @get_connection_everytime = config["get_connection_everytime"]
     @use_bind_variables = config["use_bind_variables"]
     @statement_cache_size = config["statement_cache_size"]
+    self.log.level = RTA::Log.const_get("RTA::Log::#{config["log_level"].upcase}") if config["log_level"]
 
     # 接続
     begin
